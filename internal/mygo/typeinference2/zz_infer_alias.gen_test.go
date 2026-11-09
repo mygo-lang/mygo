@@ -10,22 +10,22 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line infer_alias_test.mygo:6:1*/func TestImportedGenericTypeAliasExpandsInFunctionParameters(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	decls := parseMyGoFilesForTest(t, []string{filepath.Join(root, "lib", "text", "parsec", "parsec.mygo")})
- /*line infer_alias_test.mygo:12:3*/	__mygo_expr_0 := seedMyGoPackageDecls(MyGoPackageInfo{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls, DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(decls)}, 0, initialEnv(), []MyGoPackageInfo{})
+ /*line infer_alias_test.mygo:12:3*/	__mygo_expr_0 := seedMyGoPackageDecls(MyGoPackageInfo{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(decls)}, 0, initialEnv(), []MyGoPackageInfo{})
 	if _, ok := __mygo_expr_0.(Option__None[Env]); ok {
 		t.Fatalf("%s", "seedMyGoPackageDecls failed")
  /*line zz_infer_alias.gen_test.go:16:1*/	} else {
  /*line infer_alias_test.mygo:12:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[Env]); ok {
- /*line infer_alias_test.mygo:27:7*/			__mygo_expr_2 := envGet(__mygo_match___mygo_expr_1.F0, "PBetween")
+ /*line infer_alias_test.mygo:28:7*/			__mygo_expr_2 := envGet(__mygo_match___mygo_expr_1.F0, "PBetween")
 			if _, ok := __mygo_expr_2.(Option__None[Scheme]); ok {
 				t.Fatalf("%s", "PBetween was not seeded in the package-private environment")
  /*line zz_infer_alias.gen_test.go:21:1*/			} else {
- /*line infer_alias_test.mygo:27:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Scheme]); ok {
- /*line infer_alias_test.mygo:30:11*/					__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Body
+ /*line infer_alias_test.mygo:28:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[Scheme]); ok {
+ /*line infer_alias_test.mygo:31:11*/					__mygo_expr_4 := __mygo_match___mygo_expr_3.F0.Body
 					if _, ok := __mygo_expr_4.(ast2.MonoType__TFunc); ok {
  /*line zz_infer_alias.gen_test.go:25:1*/					} else {
- /*line infer_alias_test.mygo:33:15*/						t.Fatalf("private PBetween body = %v, want bare function type", __mygo_match___mygo_expr_3.F0.Body)
+ /*line infer_alias_test.mygo:34:15*/						t.Fatalf("private PBetween body = %v, want bare function type", __mygo_match___mygo_expr_3.F0.Body)
  /*line zz_infer_alias.gen_test.go:27:1*/					}
- /*line infer_alias_test.mygo:27:7*/				} else {
+ /*line infer_alias_test.mygo:28:7*/				} else {
  /*line zz_infer_alias.gen_test.go:29:1*/				}
 			}
  /*line infer_alias_test.mygo:12:3*/			__mygo_expr_5 := envGet(__mygo_match___mygo_expr_1.F0, "ps.PBetween")
@@ -39,31 +39,31 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line infer_alias_test.mygo:12:3*/		} else {
  /*line zz_infer_alias.gen_test.go:40:1*/		}
 	}
- /*line infer_alias_test.mygo:44:3*/	__mygo_expr_6 := seedMyGoPackageEnv([]struct {
- /*line infer_alias_test.mygo:45:5*/		F0 string
+ /*line infer_alias_test.mygo:45:3*/	__mygo_expr_6 := seedMyGoPackageEnv([]struct {
+ /*line infer_alias_test.mygo:46:5*/		F0 string
 		F1 string
- /*line infer_alias_test.mygo:45:6*/	}{struct {
+ /*line infer_alias_test.mygo:46:6*/	}{struct {
 		F0 string
 		F1 string
-	}{F0: "ps", F1: "github.com/mygo-lang/mygo/lib/text/parsec"}}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls, DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(decls)}}, []GoPackageEntry{}, initialEnv())
- /*line infer_alias_test.mygo:44:3*/	if __mygo_match___mygo_expr_20, ok := __mygo_expr_6.(Result__Err[Env, string]); ok {
- /*line infer_alias_test.mygo:57:22*/		t.Fatalf("seedMyGoPackageEnv failed: %v", __mygo_match___mygo_expr_20.F0)
+	}{F0: "ps", F1: "github.com/mygo-lang/mygo/lib/text/parsec"}}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "ps", Path: "github.com/mygo-lang/mygo/lib/text/parsec", Decls: decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(decls)}}, []GoPackageEntry{}, initialEnv())
+ /*line infer_alias_test.mygo:45:3*/	if __mygo_match___mygo_expr_20, ok := __mygo_expr_6.(Result__Err[Env, string]); ok {
+ /*line infer_alias_test.mygo:59:22*/		t.Fatalf("seedMyGoPackageEnv failed: %v", __mygo_match___mygo_expr_20.F0)
  /*line zz_infer_alias.gen_test.go:51:1*/	} else {
- /*line infer_alias_test.mygo:44:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[Env, string]); ok {
- /*line infer_alias_test.mygo:59:7*/			__mygo_expr_8 := envGet(__mygo_match___mygo_expr_7.F0, "ps.Parser")
+ /*line infer_alias_test.mygo:45:3*/		if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Ok[Env, string]); ok {
+ /*line infer_alias_test.mygo:61:7*/			__mygo_expr_8 := envGet(__mygo_match___mygo_expr_7.F0, "ps.Parser")
 			if _, ok := __mygo_expr_8.(Option__None[Scheme]); ok {
 				t.Fatalf("%s", "ps.Parser was not seeded")
  /*line zz_infer_alias.gen_test.go:56:1*/			} else {
- /*line infer_alias_test.mygo:59:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[Scheme]); ok {
- /*line infer_alias_test.mygo:62:11*/					__mygo_expr_10 := __mygo_match___mygo_expr_9.F0.Body
+ /*line infer_alias_test.mygo:61:7*/				if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[Scheme]); ok {
+ /*line infer_alias_test.mygo:64:11*/					__mygo_expr_10 := __mygo_match___mygo_expr_9.F0.Body
 					if _, ok := __mygo_expr_10.(ast2.MonoType__TFunc); ok {
  /*line zz_infer_alias.gen_test.go:60:1*/					} else {
- /*line infer_alias_test.mygo:64:23*/						t.Fatalf("ps.Parser body = %v, want expanded function type", __mygo_match___mygo_expr_9.F0.Body)
+ /*line infer_alias_test.mygo:66:23*/						t.Fatalf("ps.Parser body = %v, want expanded function type", __mygo_match___mygo_expr_9.F0.Body)
  /*line zz_infer_alias.gen_test.go:62:1*/					}
- /*line infer_alias_test.mygo:59:7*/				} else {
+ /*line infer_alias_test.mygo:61:7*/				} else {
  /*line zz_infer_alias.gen_test.go:64:1*/				}
 			}
- /*line infer_alias_test.mygo:68:7*/			__mygo_expr_11 := envGet(__mygo_match___mygo_expr_7.F0, "Parser")
+ /*line infer_alias_test.mygo:70:7*/			__mygo_expr_11 := envGet(__mygo_match___mygo_expr_7.F0, "Parser")
 			if _, ok := __mygo_expr_11.(Option__Some[Scheme]); ok {
 				t.Fatalf("%s", "package-local Parser alias leaked into importing environment")
 			} else {
@@ -71,115 +71,115 @@ import . "github.com/mygo-lang/mygo/prelude"
 				} else {
  /*line zz_infer_alias.gen_test.go:72:1*/				}
 			}
- /*line infer_alias_test.mygo:44:3*/			__mygo_expr_12 := envGet(__mygo_match___mygo_expr_7.F0, "ps.PBetween")
+ /*line infer_alias_test.mygo:45:3*/			__mygo_expr_12 := envGet(__mygo_match___mygo_expr_7.F0, "ps.PBetween")
 			if _, ok := __mygo_expr_12.(Option__None[Scheme]); ok {
 				t.Fatalf("%s", "ps.PBetween was not seeded")
  /*line zz_infer_alias.gen_test.go:77:1*/			} else {
- /*line infer_alias_test.mygo:44:3*/				if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[Scheme]); ok {
- /*line infer_alias_test.mygo:77:11*/					__mygo_expr_14 := __mygo_match___mygo_expr_13.F0.Body
+ /*line infer_alias_test.mygo:45:3*/				if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[Scheme]); ok {
+ /*line infer_alias_test.mygo:79:11*/					__mygo_expr_14 := __mygo_match___mygo_expr_13.F0.Body
 					if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(ast2.MonoType__TQualifiedName); ok {
- /*line infer_alias_test.mygo:79:15*/						__mygo_expr_16 := *__mygo_match___mygo_expr_15.F1
+ /*line infer_alias_test.mygo:81:15*/						__mygo_expr_16 := *__mygo_match___mygo_expr_15.F1
 						if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(ast2.MonoType__TFunc); ok {
- /*line infer_alias_test.mygo:81:19*/							__mygo_expr_18 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_17.F0, 0)
+ /*line infer_alias_test.mygo:83:19*/							__mygo_expr_18 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_17.F0, 0)
 							if _, ok := __mygo_expr_18.(Option__None[ast2.MonoType]); ok {
 								t.Fatalf("%s", "ps.PBetween has no first parameter")
  /*line zz_infer_alias.gen_test.go:86:1*/							} else {
- /*line infer_alias_test.mygo:81:19*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Option__Some[ast2.MonoType]); ok {
- /*line infer_alias_test.mygo:84:23*/									if _, ok := __mygo_match___mygo_expr_19.F0.(ast2.MonoType__TFunc); ok {
+ /*line infer_alias_test.mygo:83:19*/								if __mygo_match___mygo_expr_19, ok := __mygo_expr_18.(Option__Some[ast2.MonoType]); ok {
+ /*line infer_alias_test.mygo:86:23*/									if _, ok := __mygo_match___mygo_expr_19.F0.(ast2.MonoType__TFunc); ok {
  /*line zz_infer_alias.gen_test.go:89:1*/									} else {
- /*line infer_alias_test.mygo:87:27*/										t.Fatalf("ps.PBetween first parameter = %v, want expanded Parser function", __mygo_match___mygo_expr_19.F0)
+ /*line infer_alias_test.mygo:89:27*/										t.Fatalf("ps.PBetween first parameter = %v, want expanded Parser function", __mygo_match___mygo_expr_19.F0)
  /*line zz_infer_alias.gen_test.go:91:1*/									}
- /*line infer_alias_test.mygo:81:19*/								} else {
+ /*line infer_alias_test.mygo:83:19*/								} else {
  /*line zz_infer_alias.gen_test.go:93:1*/								}
 							}
 						} else {
- /*line infer_alias_test.mygo:93:27*/							t.Fatalf("ps.PBetween inner = %v, want function", *__mygo_match___mygo_expr_15.F1)
+ /*line infer_alias_test.mygo:95:27*/							t.Fatalf("ps.PBetween inner = %v, want function", *__mygo_match___mygo_expr_15.F1)
  /*line zz_infer_alias.gen_test.go:97:1*/						}
 					} else {
- /*line infer_alias_test.mygo:96:23*/						t.Fatalf("ps.PBetween body = %v, want qualified function", __mygo_match___mygo_expr_13.F0.Body)
+ /*line infer_alias_test.mygo:98:23*/						t.Fatalf("ps.PBetween body = %v, want qualified function", __mygo_match___mygo_expr_13.F0.Body)
  /*line zz_infer_alias.gen_test.go:100:1*/					}
- /*line infer_alias_test.mygo:44:3*/				} else {
+ /*line infer_alias_test.mygo:45:3*/				} else {
  /*line zz_infer_alias.gen_test.go:102:1*/				}
 			}
- /*line infer_alias_test.mygo:44:3*/		} else {
+ /*line infer_alias_test.mygo:45:3*/		} else {
  /*line zz_infer_alias.gen_test.go:105:1*/		}
 	}
- /*line infer_alias_test.mygo:44:3*/	return
+ /*line infer_alias_test.mygo:45:3*/	return
  /*line zz_infer_alias.gen_test.go:108:1*/}
- /*line infer_alias_test.mygo:104:1*/func TestInferResolvesNestedBareConstructorToVariantPattern(t *testing.T) {
+ /*line infer_alias_test.mygo:106:1*/func TestInferResolvesNestedBareConstructorToVariantPattern(t *testing.T) {
 	source := "package sample\n\nfunc unwrapOr(t: Result[Option[Int], String]) -> Int\n  switch t\n    case Ok(Some(x)) => x\n    case Ok(None) => 0\n  end\nend\n"
- /*line infer_alias_test.mygo:114:3*/	__mygo_expr_0 := inferSourceTest(t, source)
+ /*line infer_alias_test.mygo:116:3*/	__mygo_expr_0 := inferSourceTest(t, source)
 	if _, ok := __mygo_expr_0.(Option__None[PackageInfo]); ok {
  /*line zz_infer_alias.gen_test.go:113:1*/	} else {
- /*line infer_alias_test.mygo:114:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
- /*line infer_alias_test.mygo:117:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.TypedDecls, 0)
+ /*line infer_alias_test.mygo:116:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[PackageInfo]); ok {
+ /*line infer_alias_test.mygo:119:7*/			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_1.F0.TypedDecls, 0)
 			if _, ok := __mygo_expr_2.(Option__None[ast2.Decl]); ok {
 				t.Fatalf("%s", "typed decls[0] missing")
  /*line zz_infer_alias.gen_test.go:118:1*/			} else {
- /*line infer_alias_test.mygo:117:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
- /*line infer_alias_test.mygo:120:11*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__FuncDecl); ok {
- /*line infer_alias_test.mygo:122:15*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
+ /*line infer_alias_test.mygo:119:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ast2.Decl]); ok {
+ /*line infer_alias_test.mygo:122:11*/					if __mygo_match___mygo_expr_4, ok := __mygo_match___mygo_expr_3.F0.(ast2.Decl__FuncDecl); ok {
+ /*line infer_alias_test.mygo:124:15*/						__mygo_expr_5 := __mygo_match___mygo_expr_4.F4.Kind
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(ast2.ExprKind__BlockExpr); ok {
- /*line infer_alias_test.mygo:124:19*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F0, 0)
+ /*line infer_alias_test.mygo:126:19*/							__mygo_expr_7 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F0, 0)
 							if _, ok := __mygo_expr_7.(Option__None[ast2.Stmt]); ok {
 								t.Fatalf("%s", "body[0] missing")
  /*line zz_infer_alias.gen_test.go:126:1*/							} else {
- /*line infer_alias_test.mygo:124:19*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[ast2.Stmt]); ok {
- /*line infer_alias_test.mygo:127:23*/									if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_8.F0.(ast2.Stmt__ExprStmt); ok {
- /*line infer_alias_test.mygo:129:27*/										__mygo_expr_10 := __mygo_match___mygo_expr_9.F0.Kind
+ /*line infer_alias_test.mygo:126:19*/								if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Option__Some[ast2.Stmt]); ok {
+ /*line infer_alias_test.mygo:129:23*/									if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_8.F0.(ast2.Stmt__ExprStmt); ok {
+ /*line infer_alias_test.mygo:131:27*/										__mygo_expr_10 := __mygo_match___mygo_expr_9.F0.Kind
 										if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(ast2.ExprKind__SwitchExpr); ok {
- /*line infer_alias_test.mygo:131:31*/											__mygo_expr_12 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_11.F1, 1)
+ /*line infer_alias_test.mygo:133:31*/											__mygo_expr_12 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_11.F1, 1)
 											if _, ok := __mygo_expr_12.(Option__None[ast2.SwitchCase]); ok {
 												t.Fatalf("%s", "second case missing")
  /*line zz_infer_alias.gen_test.go:134:1*/											} else {
- /*line infer_alias_test.mygo:131:31*/												if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[ast2.SwitchCase]); ok {
- /*line infer_alias_test.mygo:134:35*/													__mygo_expr_14 := __mygo_match___mygo_expr_13.F0.Pattern
+ /*line infer_alias_test.mygo:133:31*/												if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Option__Some[ast2.SwitchCase]); ok {
+ /*line infer_alias_test.mygo:136:35*/													__mygo_expr_14 := __mygo_match___mygo_expr_13.F0.Pattern
 													if __mygo_match___mygo_expr_15, ok := __mygo_expr_14.(ast2.Pattern__VariantPattern); ok {
- /*line infer_alias_test.mygo:136:55*/														if __mygo_match___mygo_expr_15.F0 != "Ok" {
- /*line infer_alias_test.mygo:137:41*/															t.Fatalf("second case pattern = %s, want Ok", __mygo_match___mygo_expr_15.F0)
- /*line infer_alias_test.mygo:136:39*/														} else {
+ /*line infer_alias_test.mygo:138:55*/														if __mygo_match___mygo_expr_15.F0 != "Ok" {
+ /*line infer_alias_test.mygo:139:41*/															t.Fatalf("second case pattern = %s, want Ok", __mygo_match___mygo_expr_15.F0)
+ /*line infer_alias_test.mygo:138:39*/														} else {
  /*line zz_infer_alias.gen_test.go:141:1*/														}
- /*line infer_alias_test.mygo:134:35*/														__mygo_expr_16 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_15.F1, 0)
+ /*line infer_alias_test.mygo:136:35*/														__mygo_expr_16 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_15.F1, 0)
 														if _, ok := __mygo_expr_16.(Option__None[ast2.Pattern]); ok {
 															t.Fatalf("%s", "Ok has no inner pattern")
  /*line zz_infer_alias.gen_test.go:145:1*/														} else {
- /*line infer_alias_test.mygo:134:35*/															if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Option__Some[ast2.Pattern]); ok {
- /*line infer_alias_test.mygo:142:43*/																if __mygo_match___mygo_expr_18, ok := __mygo_match___mygo_expr_17.F0.(ast2.Pattern__VariantPattern); ok {
- /*line infer_alias_test.mygo:144:63*/																	if __mygo_match___mygo_expr_18.F0 != "None" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_18.F1) != 0 {
- /*line infer_alias_test.mygo:145:49*/																		t.Fatalf("inner variant = %s with %d args, want None with none", __mygo_match___mygo_expr_18.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_18.F1))
- /*line infer_alias_test.mygo:142:43*/																	} else {
+ /*line infer_alias_test.mygo:136:35*/															if __mygo_match___mygo_expr_17, ok := __mygo_expr_16.(Option__Some[ast2.Pattern]); ok {
+ /*line infer_alias_test.mygo:144:43*/																if __mygo_match___mygo_expr_18, ok := __mygo_match___mygo_expr_17.F0.(ast2.Pattern__VariantPattern); ok {
+ /*line infer_alias_test.mygo:146:63*/																	if __mygo_match___mygo_expr_18.F0 != "None" || MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_18.F1) != 0 {
+ /*line infer_alias_test.mygo:147:49*/																		t.Fatalf("inner variant = %s with %d args, want None with none", __mygo_match___mygo_expr_18.F0, MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_18.F1))
+ /*line infer_alias_test.mygo:144:43*/																	} else {
  /*line zz_infer_alias.gen_test.go:151:1*/																	}
- /*line infer_alias_test.mygo:142:43*/																} else {
+ /*line infer_alias_test.mygo:144:43*/																} else {
 																	t.Fatalf("%s", "inner pattern is not VariantPattern")
  /*line zz_infer_alias.gen_test.go:154:1*/																}
- /*line infer_alias_test.mygo:134:35*/															} else {
+ /*line infer_alias_test.mygo:136:35*/															} else {
  /*line zz_infer_alias.gen_test.go:156:1*/															}
 														}
- /*line infer_alias_test.mygo:134:35*/													} else {
+ /*line infer_alias_test.mygo:136:35*/													} else {
 														t.Fatalf("%s", "second case pattern is not VariantPattern")
  /*line zz_infer_alias.gen_test.go:160:1*/													}
- /*line infer_alias_test.mygo:131:31*/												} else {
+ /*line infer_alias_test.mygo:133:31*/												} else {
  /*line zz_infer_alias.gen_test.go:162:1*/												}
 											}
- /*line infer_alias_test.mygo:129:27*/										} else {
+ /*line infer_alias_test.mygo:131:27*/										} else {
 											t.Fatalf("%s", "stmt is not SwitchExpr")
  /*line zz_infer_alias.gen_test.go:166:1*/										}
- /*line infer_alias_test.mygo:127:23*/									} else {
+ /*line infer_alias_test.mygo:129:23*/									} else {
 										t.Fatalf("%s", "body[0] is not ExprStmt")
  /*line zz_infer_alias.gen_test.go:169:1*/									}
- /*line infer_alias_test.mygo:124:19*/								} else {
+ /*line infer_alias_test.mygo:126:19*/								} else {
  /*line zz_infer_alias.gen_test.go:171:1*/								}
 							}
- /*line infer_alias_test.mygo:122:15*/						} else {
+ /*line infer_alias_test.mygo:124:15*/						} else {
 							t.Fatalf("%s", "func body is not BlockExpr")
  /*line zz_infer_alias.gen_test.go:175:1*/						}
- /*line infer_alias_test.mygo:120:11*/					} else {
+ /*line infer_alias_test.mygo:122:11*/					} else {
  /*line zz_infer_alias.gen_test.go:177:1*/					}
- /*line infer_alias_test.mygo:117:7*/				} else {
+ /*line infer_alias_test.mygo:119:7*/				} else {
  /*line zz_infer_alias.gen_test.go:179:1*/				}
 			}
- /*line infer_alias_test.mygo:114:3*/		} else {
+ /*line infer_alias_test.mygo:116:3*/		} else {
  /*line zz_infer_alias.gen_test.go:182:1*/		}
 	}
- /*line infer_alias_test.mygo:114:3*/	return
+ /*line infer_alias_test.mygo:116:3*/	return
  /*line zz_infer_alias.gen_test.go:185:1*/}

@@ -192,7 +192,7 @@ func codegen3SourceDigest(dir: String) -> String
 end
 
 func codegen3PackageKey(
-  dir: String,
+  sourceDigest: String,
   level: Int,
   noPrelude: Bool,
   compilerID: String,
@@ -214,7 +214,7 @@ func codegen3PackageKey(
     goInputs,
     "opt=" + level.ToString(),
     "noPrelude=" + noPrelude.ToString(),
-    codegen3SourceDigest(dir),
+    sourceDigest,
   ]
   codegen3HashParts(parts.Concat(sorted))
 end
@@ -229,8 +229,20 @@ func codegen3SourceFingerprint(dir: String, state: BootstrapState) -> String
     "opt=" + state.OptimizationLevel.ToString(),
     "noPrelude=" + state.NoPrelude.ToString(),
     bootstrapCodegen3ImportPath(dir),
-    codegen3SourceDigest(dir),
+    codegen3StateSourceDigest(dir, state),
   ])
+end
+
+func codegen3StateSourceDigest(dir: String, state: BootstrapState) -> String
+  switch state.SourceDigests.Get(dir)
+    case Some(digest) => digest
+    case None then
+      bootstrapRecordStage(state, "source-digest")
+      let digest = codegen3SourceDigest(dir)
+      state.SourceDigests.Set(dir, digest)
+      digest
+    end
+  end
 end
 
 func codegen3PackageInputKey(
@@ -340,6 +352,7 @@ func codegen3MetadataInputs(
   entry: String,
   packagePath: String
 ) -> Result[BootstrapInputs, Error]
+  bootstrapRecordStage(state, "metadata-load")
   let staged = filepath.Join(
     state.BuildRoot,
     "metadata",
@@ -497,7 +510,7 @@ func codegen3PackageSummaryFor(
         GoInputs: state.GoInputsDigest,
         Optimization: state.OptimizationLevel,
         NoPrelude: state.NoPrelude,
-        SourceDigest: codegen3SourceDigest(dir),
+        SourceDigest: codegen3StateSourceDigest(dir, state),
         Dependencies: dependencies,
         Checksum: codegen3SummaryChecksum(codegen3PackageSummary {
           Format: codegen3SummaryFormat,
@@ -509,7 +522,7 @@ func codegen3PackageSummaryFor(
           GoInputs: state.GoInputsDigest,
           Optimization: state.OptimizationLevel,
           NoPrelude: state.NoPrelude,
-          SourceDigest: codegen3SourceDigest(dir),
+          SourceDigest: codegen3StateSourceDigest(dir, state),
           Dependencies: dependencies,
           Checksum: "",
         }),
@@ -526,6 +539,8 @@ func codegen3ValidatePackageSummary(
   visiting: Map[String, Bool]
 ) -> Bool
   if visiting.Get(dir).UnwrapOr(false) then
+    false
+  elsif state.ValidatedSummaries.Get(dir).UnwrapOr("") == summary.InputKey && summary.InputKey != "" then
     true
   elsif summary.Format != codegen3SummaryFormat ||
     summary.SourceFingerprint != codegen3SourceFingerprint(dir, state) ||
@@ -534,10 +549,11 @@ func codegen3ValidatePackageSummary(
     summary.GoInputs != state.GoInputsDigest ||
     summary.Optimization != state.OptimizationLevel ||
     summary.NoPrelude != state.NoPrelude ||
-    summary.SourceDigest != codegen3SourceDigest(dir) ||
+    summary.SourceDigest != codegen3StateSourceDigest(dir, state) ||
     summary.Checksum != codegen3SummaryChecksum(summary) then
     false
   else
+    bootstrapRecordStage(state, "summary-validation")
     visiting.Set(dir, true)
     let valid = codegen3ValidateSummaryDependencies(
       dir,
@@ -550,6 +566,7 @@ func codegen3ValidatePackageSummary(
     if valid then
       state.PackageKeys.Set(dir, summary.PackageKey)
       state.PackageInputKeys.Set(dir, summary.InputKey)
+      state.ValidatedSummaries.Set(dir, summary.InputKey)
       true
     else
       false

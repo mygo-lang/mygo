@@ -51,6 +51,8 @@ struct BootstrapState
   GoInputsDigest: String
   PackageKeys: Map[String, String]
   PackageInputKeys: Map[String, String]
+  ValidatedSummaries: Map[String, String]
+  SourceDigests: Map[String, String]
   StageCounters: Map[String, Int]
 end
 
@@ -104,6 +106,8 @@ func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool)
     GoInputsDigest: "",
     PackageKeys: {},
     PackageInputKeys: {},
+    ValidatedSummaries: {},
+    SourceDigests: {},
     StageCounters: {},
   }
 end
@@ -443,8 +447,13 @@ func compileUncachedBootstrapDir(
             Err(bootstrapContext("resolve prelude", dir, err))
           end
           case Ok(preludeDir) then
+            let pretypedPrelude = if dir == preludeDir then None else
+              codegen3ReadVerifiedTypedSummary(preludeDir, state, "main").AndThen(codegen3TypedSummaryPackageInfo)
+            end
             let preludeFiles = if dir == preludeDir then
               Ok([] as Slice[String])
+            elsif pretypedPrelude.IsSome() then
+              compileDirBootstrapWithCodegen(preludeDir, state, true)
             else
               compileDirBootstrapMyGO(preludeDir, state)
             end
@@ -454,7 +463,16 @@ func compileUncachedBootstrapDir(
                 Err(err)
               end
               case Ok(preludeWritten) then
-                let preludeLoaded = bootstrapLoadCachedSourcesDiagnostic(preludeDir, state)
+                let preludeLoaded = switch pretypedPrelude
+                  case Some(info) then
+                    bootstrapRecordStage(state, "prelude-summary-sources")
+                    Ok(BootstrapInputs { Inputs: [], Sources: info.TypedDeclSources })
+                  end
+                  case None then
+                    bootstrapRecordStage(state, "prelude-source-load")
+                    bootstrapLoadCachedSourcesDiagnostic(preludeDir, state)
+                  end
+                end
                 switch preludeLoaded
                   case Err(msg) then
                     state.Compiling.Delete(dir)
@@ -552,11 +570,15 @@ func compileUncachedBootstrapDir(
                                   end
                                 end
                                 let inferenceStarted = bootstrapTimingStart()
-                                let inferred = bootstrapInferPackageWithDynamicAPIsDiagnostic(
+                                bootstrapRecordStage(state, "inference")
+                                let inferred = bootstrapInferPackageWithPretypedPreludeDiagnostic(
                                   mainInputs,
                                   externalSources,
                                   completePackagesRef.value(),
-                                  myGoPkgInfos
+                                  myGoPkgInfos,
+                                  pretypedPrelude,
+                                  preludeDir,
+                                  state
                                 )
                                 switch inferred
                                   case Err(msg) then
@@ -593,6 +615,55 @@ func compileUncachedBootstrapDir(
         end
       end
     end
+  end
+end
+
+func bootstrapInferPackageWithPretypedPreludeDiagnostic(
+  inputs: BootstrapInputs,
+  externalSources: Slice[typeinference2.PkgDeclSource],
+  goPackages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo],
+  pretyped: Option[typeinference2.PackageInfo],
+  preludeDir: String,
+  state: BootstrapState
+) -> Result[typeinference2.PackageInfo, ast2.Diagnostic]
+  switch pretyped
+    case None => bootstrapInferPackageWithDynamicAPIsDiagnostic(inputs, externalSources, goPackages, myGoPackages)
+    case Some(info) then
+      switch codegen2.DynamicDispatchDeclsDiagnostic(inputs.Inputs, myGoPackages)
+        case Err(err) => Err(err)
+        case Ok(dynamicDecls) then
+          if dynamicDecls.Len() != 0 then
+            bootstrapInferPackageWithPreludeSourcesDiagnostic(inputs, preludeDir, goPackages, myGoPackages, state)
+          else
+            switch typeinference2.InferPackageWithExternalInfoDiagnostic(inputs.Sources, info, goPackages, myGoPackages)
+              case Err(_) then
+                bootstrapRecordStage(state, "typed-prelude-fallback")
+                bootstrapInferPackageWithPreludeSourcesDiagnostic(inputs, preludeDir, goPackages, myGoPackages, state)
+              end
+              case Ok(result) then
+                bootstrapRecordStage(state, "typed-prelude-hit")
+                Ok(result)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func bootstrapInferPackageWithPreludeSourcesDiagnostic(
+  inputs: BootstrapInputs,
+  preludeDir: String,
+  goPackages: Slice[typeinference2.GoPackageEntry],
+  myGoPackages: Slice[typeinference2.MyGoPackageInfo],
+  state: BootstrapState
+) -> Result[typeinference2.PackageInfo, ast2.Diagnostic]
+  bootstrapRecordStage(state, "prelude-source-load")
+  switch bootstrapLoadCachedSourcesDiagnostic(preludeDir, state)
+    case Err(err) => Err(err)
+    case Ok(prelude) => bootstrapInferPackageWithDynamicAPIsDiagnostic(inputs, prelude.Sources, goPackages, myGoPackages)
   end
 end
 
@@ -892,18 +963,30 @@ func bootstrapWalkImports(
             switch dependencyBuild
               case Err(err) => Err(bootstrapImportContext(imp, err, false))
               case Ok(files) then
-                let loaded = bootstrapLoadCachedSourcesDiagnostic(dependencyDir, state)
+                let cached = codegen3ReadVerifiedTypedSummary(dependencyDir, state, "main").AndThen(codegen3TypedSummaryPackageInfo)
+                let loaded = switch cached
+                  case Some(info) => Ok(BootstrapInputs { Inputs: [], Sources: info.TypedDeclSources })
+                  case None => bootstrapLoadCachedSourcesDiagnostic(dependencyDir, state)
+                end
                 switch loaded
                   case Err(err) => Err(bootstrapImportContext(imp, bootstrapAsError(err), false))
-                  case Ok(_) then
-                    bootstrapWalkImports(
-                      workspaceRoot,
-                      fromDir,
-                      imports,
-                      index + 1,
-                      state,
-                      appendBootstrapStrings(written, files)
-                    )
+                  case Ok(loadedInputs) then
+                    let transitive = if cached.IsSome() && state.GenerateImportFiles then
+                      bootstrapWalkImports(workspaceRoot, dependencyDir, bootstrapImportsFromSources(loadedInputs.Sources), 0, state, [])
+                    else Ok([] as Slice[String]) end
+                    switch transitive
+                      case Err(err) => Err(bootstrapImportContext(imp, err, false))
+                      case Ok(transitiveFiles) then
+                        bootstrapWalkImports(
+                          workspaceRoot,
+                          fromDir,
+                          imports,
+                          index + 1,
+                          state,
+                          appendBootstrapStrings(written, appendBootstrapStrings(files, transitiveFiles))
+                        )
+                      end
+                    end
                   end
                 end
               end
@@ -1504,14 +1587,25 @@ func bootstrapCollectMyGoPkgInfos(
             if bootstrapHasMyGoPackagePath(out, imp.Path, 0) then
               bootstrapCollectMyGoPkgInfos(workspaceRoot, fromDir, imports, index + 1, state, out)
             else
-              switch bootstrapDependencySourcesDiagnostic(depDir, state)
+              let summary = codegen3ReadVerifiedTypedSummary(depDir, state, "main")
+              let pretyped = summary.AndThen(codegen3TypedSummaryPackageInfo)
+              let dependencySources = switch pretyped
+                case Some(info) => Ok(info.TypedDeclSources)
+                case None => bootstrapDependencySourcesDiagnostic(depDir, state)
+              end
+              switch dependencySources
                 case Ok(sources) then
+                  if pretyped.IsSome() then bootstrapRecordStage(state, "typed-dependency-hit") end
                   let decls = bootstrapFlattenSources(sources, 0, [] as Slice[ast2.Decl])
                   let info = typeinference2.MyGoPackageInfo {
                     Alias: imp.Alias,
                     Path: imp.Path,
                     Decls: decls,
-                    DynamicMetadataJSON: bootstrapMetadataJSON(depDir),
+                    PretypedEnv: pretyped.Map(func(value: typeinference2.PackageInfo) -> Slice[typeinference2.EnvEntry] value.Env end),
+                    DynamicMetadataJSON: switch summary
+                      case Some(value) => value.DynamicMetadata
+                      case None => bootstrapDependencyMetadataJSON(depDir, state)
+                    end,
                     EnumIndex: typeinference2.BuildEnumDeclIndex(decls),
                     ValueIndex: typeinference2.BuildValueDeclIndex(decls),
                   }
@@ -1538,6 +1632,21 @@ func bootstrapCollectMyGoPkgInfos(
   end
 end
 
+func bootstrapDependencyMetadataJSON(dir: String, state: BootstrapState) -> String
+  if state.Codegen3 then
+    switch bootstrapCodegen3OutputDir(state, dir)
+      case Err(_) => bootstrapMetadataJSON(dir)
+      case Ok(outputDir) then
+        bootstrapRecordStage(state, "metadata-read")
+        let generated = bootstrapMetadataJSON(outputDir)
+        if generated == "" then bootstrapMetadataJSON(dir) else generated end
+      end
+    end
+  else
+    bootstrapMetadataJSON(dir)
+  end
+end
+
 func bootstrapDependencySourcesDiagnostic(
   dir: String,
   state: BootstrapState
@@ -1556,7 +1665,13 @@ func bootstrapDependencySourcesDiagnostic(
       # Infer the dependency once on demand before falling back to parsed
       # declarations.
       if !state.Compiling.Get(dir).UnwrapOr(false) then
-        let _ = compileUncachedBootstrapDir(dir, state, false)
+        if state.Codegen3 && state.CacheEnabled then
+          let _ = compileMissingBootstrapDir(dir, state, false)
+          ()
+        else
+          let _ = compileUncachedBootstrapDir(dir, state, false)
+          ()
+        end
       end
       switch state.TypedSourcesCache.Get(dir)
         case Some(sources) then
@@ -1582,6 +1697,7 @@ func bootstrapTypedSourcesWithImports(
   bootstrapTypedSourcesWithImportsAt(
     typed,
     bootstrapImportDeclsFromSources(parsed, 0, []),
+    bootstrapImportPositionsFromSources(parsed, 0, []),
     0,
     []
   )
@@ -1590,6 +1706,7 @@ end
 func bootstrapTypedSourcesWithImportsAt(
   typed: Slice[typeinference2.PkgDeclSource],
   imports: Slice[ast2.Decl],
+  importPositions: Slice[ast2.SourcePos],
   index: Int,
   out: Slice[typeinference2.PkgDeclSource]
 ) -> Slice[typeinference2.PkgDeclSource]
@@ -1597,7 +1714,7 @@ func bootstrapTypedSourcesWithImportsAt(
     out
   else
     switch typed.Get(index)
-      case None => bootstrapTypedSourcesWithImportsAt(typed, imports, index + 1, out)
+      case None => bootstrapTypedSourcesWithImportsAt(typed, imports, importPositions, index + 1, out)
       case Some(source) then
         let decls = if index == 0 then
           imports.Concat(source.Decls)
@@ -1607,17 +1724,44 @@ func bootstrapTypedSourcesWithImportsAt(
         bootstrapTypedSourcesWithImportsAt(
           typed,
           imports,
+          importPositions,
           index + 1,
           out.Append(typeinference2.PkgDeclSource {
             Path: source.Path,
             PackageImportPath: source.PackageImportPath,
             Decls: decls,
-            DeclPositions: source.DeclPositions,
+            DeclPositions: if index == 0 then importPositions.Concat(source.DeclPositions) else source.DeclPositions end,
           })
         )
     end
   end
 end
+end
+
+func bootstrapImportPositionsFromSources(sources: Slice[typeinference2.PkgDeclSource], index: Int, out: Slice[ast2.SourcePos]) -> Slice[ast2.SourcePos]
+  if index >= sources.Len() then out else
+    switch sources.Get(index)
+      case None => bootstrapImportPositionsFromSources(sources, index + 1, out)
+      case Some(source) => bootstrapImportPositionsFromSources(sources, index + 1, bootstrapImportPositionsFromDecls(source.Decls, source.DeclPositions, 0, out))
+    end
+  end
+end
+
+func bootstrapImportPositionsFromDecls(decls: Slice[ast2.Decl], positions: Slice[ast2.SourcePos], index: Int, out: Slice[ast2.SourcePos]) -> Slice[ast2.SourcePos]
+  if index >= decls.Len() then out else
+    switch decls.Get(index)
+      case Some(decl) then
+        switch decl
+          case ImportDecl(_, _) then
+            let fallback = ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }
+            bootstrapImportPositionsFromDecls(decls, positions, index + 1, out.Append(positions.Get(index).UnwrapOr(fallback)))
+          end
+          case _ => bootstrapImportPositionsFromDecls(decls, positions, index + 1, out)
+        end
+      end
+      case None => bootstrapImportPositionsFromDecls(decls, positions, index + 1, out)
+    end
+  end
 end
 
 func bootstrapImportDeclsFromSources(

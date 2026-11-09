@@ -1,7 +1,9 @@
 package compiler
 
 import os "go:os"
+import bytes "go:bytes"
 import filepath "go:path/filepath"
+import strings "go:strings"
 import testing "go:testing"
 
 func codegen3CacheTestSources(t: Ref[testing.T], dir: String) -> ()
@@ -125,6 +127,46 @@ func TestCodegen3GoInputsDigestTracksLocalReplacement(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestCodegen3DisabledCacheSkipsGoInputsDigest(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", "off")
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/cache-off\n\ngo 1.24\n")
+  writeFixture(t, root, "input.go", "package fixture\n\nconst Value = 1\n")
+  let state = codegen3EarlyHitState(t, root)
+  if state.CacheEnabled || state.GoInputsDigest != "" || state.CompilerID != "" then
+    t.Fatalf("disabled cache computed cache identity: %s %s", state.GoInputsDigest, state.CompilerID)
+  end
+end
+
+func TestCodegen3TypedSummaryInvalidatesBuildOptions(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  codegen3CacheTestSources(t, root)
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3ReadVerifiedTypedSummary(root, codegen3EarlyHitState(t, root), "main").IsNone() then
+    t.Fatal("baseline summary missing")
+  end
+  var otherLevel = codegen3EarlyHitState(t, root)
+  otherLevel.OptimizationLevel = 1
+  if codegen3ReadVerifiedTypedSummary(root, otherLevel, "main").IsSome() then
+    t.Fatal("summary was reused across optimization levels")
+  end
+  var otherCompiler = codegen3EarlyHitState(t, root)
+  otherCompiler.CompilerID = "other-compiler"
+  if codegen3ReadVerifiedTypedSummary(root, otherCompiler, "main").IsSome() then
+    t.Fatal("summary was reused across compiler identities")
+  end
+  var otherGoInputs = codegen3EarlyHitState(t, root)
+  otherGoInputs.GoInputsDigest = "other-go-inputs"
+  if codegen3ReadVerifiedTypedSummary(root, otherGoInputs, "main").IsSome() then
+    t.Fatal("summary was reused across Go toolchain inputs")
+  end
+end
+
 func codegen3ExpectedFailure(t: Ref[testing.T], dir: String) -> String
   switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
     case Err(err) => err.Error()
@@ -190,6 +232,155 @@ func codegen3StageCount(state: BootstrapState, stage: String) -> Int
   state.StageCounters.Get(stage).UnwrapOr(0)
 end
 
+func TestCodegen3PretypedPreludeRuntimeHit(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module github.com/mygo-lang/mygo\n\ngo 1.24\n")
+  let prelude = filepath.Join(root, "prelude")
+  switch os.MkdirAll(prelude, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create prelude: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, prelude, "prelude.mygo", """package prelude
+enum Choice[A]
+  Some(A)
+  None
+end
+impl[A] Choice[A]
+  func Echo(value: Choice[A]) -> Choice[A]
+    value
+  end
+end
+func Value() -> Int
+  7
+end
+""")
+  writeFixture(t, root, "main.mygo", "package main\nfunc Use() -> Int\n  Value()\nend\n")
+  var cold = codegen3EarlyHitState(t, root)
+  cold.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(prelude, cold, true)
+    case Err(err) => t.Fatalf("cold prelude: %v", err)
+    case Ok(_) => ()
+  end
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold compilation: %v", err)
+    case Ok(_) => ()
+  end
+  var probe = codegen3EarlyHitState(t, root)
+  probe.NoPrelude = false
+  if codegen3ReadVerifiedTypedSummary(prelude, probe, "main").IsNone() then
+    t.Fatalf("prelude typed summary unavailable: key=%s cold=%s probe=%s package=%+v path=%s", cold.PackageKeys.Get(prelude).UnwrapOr(""), codegen3SourceFingerprint(prelude, cold), codegen3SourceFingerprint(prelude, probe), codegen3ReadPackageSummary(codegen3SourceFingerprint(prelude, probe)), codegen3SummaryPath(codegen3SourceFingerprint(prelude, probe)))
+  end
+  writeFixture(t, root, "main.mygo", "package main\nfunc Use(value: Choice[Int]) -> Choice[Int]\n  value.Echo()\nend\n")
+  var warm = codegen3EarlyHitState(t, root)
+  warm.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm compilation: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-prelude-hit") != 1 then
+    t.Fatalf("pretyped prelude was not used: hits=%d", codegen3StageCount(warm, "typed-prelude-hit"))
+  end
+  if warm.SourcesCache.Get(prelude).IsSome() || codegen3StageCount(warm, "prelude-source-load") != 0 || codegen3StageCount(warm, "parse") != 1 then
+    t.Fatalf("warm prelude was parsed: loads=%d parse=%d", codegen3StageCount(warm, "prelude-source-load"), codegen3StageCount(warm, "parse"))
+  end
+  let warmDir = bootstrapCodegen3OutputDir(warm, root).Unwrap()
+  let warmOutput = os.ReadFile(filepath.Join(warmDir, "zz_main.gen.go")).Unwrap()
+  t.Setenv("MYGO_CACHE", "off")
+  var uncached = codegen3EarlyHitState(t, root)
+  uncached.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(prelude, uncached, true)
+    case Err(err) => t.Fatalf("cache-off prelude: %v", err)
+    case Ok(_) => ()
+  end
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off compilation: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(uncached, "typed-prelude-hit") != 0 then t.Fatal("cache-off compilation used a typed summary") end
+  let uncachedDir = bootstrapCodegen3OutputDir(uncached, root).Unwrap()
+  let uncachedOutput = os.ReadFile(filepath.Join(uncachedDir, "zz_main.gen.go")).Unwrap()
+  if !bytes.Equal(warmOutput, uncachedOutput) then t.Fatal("cached and uncached output differ") end
+  t.Setenv("MYGO_CACHE", cache)
+  let key = cold.PackageKeys.Get(prelude).UnwrapOr("")
+  let path = codegen3TypedSummaryPath(key, "main")
+  switch os.WriteFile(path, "corrupt" as Slice[Byte], 0o644 as os.FileMode)
+    case Err(err) => t.Fatalf("corrupt summary: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", "package main\nfunc Use(value: Choice[Int]) -> Choice[Int]\n  value.Echo()\nend\n\n")
+  var corrupt = codegen3EarlyHitState(t, root)
+  corrupt.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(root, corrupt, true)
+    case Err(err) => t.Fatalf("corrupt-summary fallback: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(corrupt, "typed-prelude-hit") != 0 then t.Fatal("corrupt summary was used") end
+end
+
+func TestCodegen3PretypedPreludeListRuntimeHit(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module github.com/mygo-lang/mygo\n\ngo 1.24\n")
+  let prelude = filepath.Join(root, "prelude")
+  switch os.MkdirAll(prelude, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create prelude: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, prelude, "prelude.mygo", """package prelude
+enum List[A]
+  Nil
+  Node(A, Option[List[A]])
+end
+impl[T] List[T]
+  func Cons(head: T) -> List[T]
+    List.Node(head, None)
+  end
+end
+func ListToSlice[T](c: List[T]) -> Slice[T]
+  [] as Slice[T]
+end
+""")
+  writeFixture(t, root, "main.mygo", "package main\nfunc Use() -> Slice[Int]\n  let item = List.Node(1, None)\n  let items = item.Cons(2)\n  ListToSlice(items)\nend\n")
+  var cold = codegen3EarlyHitState(t, root)
+  cold.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(prelude, cold, true)
+    case Err(err) => t.Fatalf("cold prelude: %v", err)
+    case Ok(_) => ()
+  end
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold compilation: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", "package main\nfunc Use() -> Slice[Int]\n  let item = List.Node(3, None)\n  let items = item.Cons(4)\n  ListToSlice(items)\nend\n")
+  var warm = codegen3EarlyHitState(t, root)
+  warm.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm compilation: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-prelude-hit") != 1 || warm.SourcesCache.Get(prelude).IsSome() || codegen3StageCount(warm, "parse") != 1 then
+    t.Fatalf("prelude List summary was not reused: hits=%d parse=%d", codegen3StageCount(warm, "typed-prelude-hit"), codegen3StageCount(warm, "parse"))
+  end
+  let warmOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(warm, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  t.Setenv("MYGO_CACHE", "off")
+  var uncached = codegen3EarlyHitState(t, root)
+  uncached.NoPrelude = false
+  switch compileAbsoluteBootstrapDir(prelude, uncached, true)
+    case Err(err) => t.Fatalf("cache-off prelude: %v", err)
+    case Ok(_) => ()
+  end
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off compilation: %v", err)
+    case Ok(_) => ()
+  end
+  let sourceOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(uncached, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  if !bytes.Equal(warmOutput, sourceOutput) then
+    t.Fatal("List output differs with caching disabled")
+  end
+end
+
 func TestCodegen3SummaryEarlyHitSkipsParseAndFFI(t: Ref[testing.T]) -> ()
   t.Setenv("MYGO_CACHE", t.TempDir())
   let moduleRoot = t.TempDir()
@@ -236,6 +427,9 @@ func TestCodegen3SummaryEarlyHitSkipsParseAndFFI(t: Ref[testing.T]) -> ()
   end
   if codegen3StageCount(warm, "cache-early-hit") != 1 then
     t.Fatalf("warm build early hits = %d, want 1", codegen3StageCount(warm, "cache-early-hit"))
+  end
+  if warm.SourcesCache.Get(moduleRoot).IsSome() || warm.TypedSourcesCache.Get(moduleRoot).IsSome() then
+    t.Fatal("output-only hit populated declaration caches")
   end
   if codegen3StageCount(warm, "parse") != 0 || codegen3StageCount(warm, "ffi") != 0 then
     t.Fatalf("warm build repeated front-end work: parse=%d ffi=%d",
@@ -326,6 +520,88 @@ func TestCodegen3SummaryTracksCheckoutIndependentSource(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestCodegen3TypedSummaryAcrossCheckouts(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let first = t.TempDir()
+  let second = t.TempDir()
+  let module = "module example.invalid/typed-checkout\n\ngo 1.24\n"
+  let dependency = "package lib\n\nfunc Add(value: Int) -> Int\n  value + 1\nend\n"
+  let importer = "package main\nimport lib \"example.invalid/typed-checkout/lib\"\nfunc Use() -> Int\n  lib.Add(\"wrong\")\nend\n"
+  [first, second].Each(func(root: String) -> ()
+    writeFixture(t, root, "go.mod", module)
+    let dir = filepath.Join(root, "lib")
+    switch os.MkdirAll(dir, 0o755 as os.FileMode)
+      case Err(err) => t.Fatalf("create dependency: %v", err)
+      case Ok(_) => ()
+    end
+    writeFixture(t, dir, "lib.mygo", dependency)
+    writeFixture(t, root, "main.mygo", importer)
+  end)
+  let firstLib = filepath.Join(first, "lib")
+  let cold = codegen3EarlyHitState(t, first)
+  switch compileAbsoluteBootstrapDir(firstLib, cold, true)
+    case Err(err) => t.Fatalf("compile first checkout: %v", err)
+    case Ok(_) => ()
+  end
+  let secondLib = filepath.Join(second, "lib")
+  let warm = codegen3EarlyHitState(t, second)
+  switch codegen3ReadVerifiedTypedSummary(secondLib, warm, "main")
+    case None => t.Fatal("second checkout did not reuse the typed summary")
+    case Some(summary) then
+      let source = summary.Sources.Get(0).Unwrap()
+      let pos = source.Positions.Get(0).Unwrap()
+      if source.Path != filepath.Join(secondLib, "lib.mygo") || pos.SourceName != source.Path || pos.Line != 3 || pos.Column != 1 then
+        t.Fatalf("source location was not rebased: %+v", pos)
+      end
+    end
+  end
+  let overlay = codegen3EarlyHitState(t, second)
+  overlay.OverlayStamps.Set(secondLib, "unsaved")
+  if codegen3ReadVerifiedTypedSummary(secondLib, overlay, "main").IsSome() then t.Fatal("overlay accepted a disk-derived summary") end
+  let warmError = switch compileAbsoluteBootstrapDir(second, warm, true)
+    case Ok(_) then
+      t.Fatal("invalid importer was accepted")
+      ""
+    end
+    case Err(err) => err.Error()
+  end
+  if codegen3StageCount(warm, "typed-dependency-hit") == 0 then t.Fatal("diagnostic did not use the cached dependency") end
+  t.Setenv("MYGO_CACHE", "off")
+  let uncached = codegen3EarlyHitState(t, second)
+  let coldError = switch compileAbsoluteBootstrapDir(second, uncached, true)
+    case Ok(_) then
+      t.Fatal("uncached invalid importer was accepted")
+      ""
+    end
+    case Err(err) => err.Error()
+  end
+  if warmError != coldError || strings.Contains(warmError, first) || !strings.Contains(warmError, "main.mygo:4:11") then
+    t.Fatalf("cached diagnostic differs from source: cached=%s source=%s", warmError, coldError)
+  end
+end
+
+func TestCodegen3TypedSummaryTestInputIdentity(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/test-summary\n\ngo 1.24\n")
+  writeFixture(t, root, "main.mygo", "package fixture\nfunc Value() -> Int\n  1\nend\n")
+  writeFixture(t, root, "main_test.mygo", "package fixture\nfunc InternalHelper() -> Int\n  Value()\nend\n")
+  writeFixture(t, root, "external_test.mygo", "package fixture_test\nfunc ExternalHelper() -> Int\n  2\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("compile test inputs: %v", err)
+    case Ok(_) => ()
+  end
+  let warm = codegen3EarlyHitState(t, root)
+  if codegen3ReadVerifiedTypedSummary(root, warm, "internal-test").IsNone() then t.Fatal("internal-test summary missing") end
+  if codegen3ReadVerifiedTypedSummary(root, warm, "main").IsSome() || codegen3ReadVerifiedTypedSummary(root, warm, "external-test").IsSome() then
+    t.Fatal("test summary was accepted for another input kind")
+  end
+  writeFixture(t, root, "main_test.mygo", "package fixture\nfunc InternalHelper() -> Int\n  Value() + 1\nend\n")
+  let changed = codegen3EarlyHitState(t, root)
+  if codegen3ReadVerifiedTypedSummary(root, changed, "internal-test").IsSome() then t.Fatal("changed test input reused a stale summary") end
+end
+
 func TestCodegen3SummaryInvalidatesChangedSource(t: Ref[testing.T]) -> ()
   t.Setenv("MYGO_CACHE", t.TempDir())
   let moduleRoot = t.TempDir()
@@ -387,6 +663,371 @@ func TestCodegen3SummaryInvalidatesChangedDependency(t: Ref[testing.T]) -> ()
   end
   if codegen3StageCount(warm, "parse") < 2 then
     t.Fatalf("changed dependency did not invalidate its importer: parse=%d", codegen3StageCount(warm, "parse"))
+  end
+end
+
+func TestCodegen3ChangedDependencySignatureInvalidatesTypedSummary(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/signature-change\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("lib directory: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\nfunc Value() -> Int\n  1\nend\n")
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/signature-change/lib\"\nfunc Use() -> Int\n  lib.Value()\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\nfunc Value() -> String\n  \"changed\"\nend\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Ok(_) => t.Fatal("changed dependency signature was accepted")
+    case Err(err) then
+      if !strings.Contains(err.Error(), "type-mismatch") && !strings.Contains(err.Error(), "unify") then
+        t.Fatalf("signature change produced an unrelated diagnostic: %v", err)
+      end
+    end
+  end
+  if warm.SourcesCache.Get(lib).IsNone() then t.Fatal("changed dependency signature reused a typed summary") end
+  writeFixture(t, lib, "lib.mygo", "package lib\nfunc Value() -> Int\n  2\nend\n")
+  let repaired = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, repaired, true)
+    case Err(err) => t.Fatalf("repaired build: %v", err)
+    case Ok(_) => ()
+  end
+end
+
+func TestCodegen3OnDemandDependencyFallsBackWithoutTypedSummary(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/on-demand\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("lib directory: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Value() -> Int\n  42\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(lib, cold, true)
+    case Err(err) => t.Fatalf("cold dependency: %v", err)
+    case Ok(_) => ()
+  end
+  let warm = codegen3EarlyHitState(t, root)
+  switch bootstrapDependencySourcesDiagnostic(lib, warm)
+    case Err(err) => t.Fatalf("warm dependency: %v", err)
+    case Ok(sources) then
+      if sources.Len() == 0 then
+        t.Fatal("warm dependency has no declarations")
+      end
+    end
+  end
+  if codegen3StageCount(warm, "cache-early-hit") != 0 ||
+    codegen3StageCount(warm, "parse") != 1 || codegen3StageCount(warm, "ffi") != 1 ||
+    codegen3StageCount(warm, "inference") != 1 then
+    t.Fatalf("on-demand hit=%d parse=%d ffi=%d inference=%d",
+      codegen3StageCount(warm, "cache-early-hit"),
+      codegen3StageCount(warm, "parse"), codegen3StageCount(warm, "ffi"),
+      codegen3StageCount(warm, "inference"))
+  end
+end
+
+func TestCodegen3OnDemandTypedDependencyHit(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/typed-dep\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create dependency: %v", err)
+    case Ok(_) => ()
+  end
+  let util = filepath.Join(root, "util")
+  switch os.MkdirAll(util, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create transitive dependency: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, util, "util.mygo", "package util\nfunc Identity(value: Int) -> Int\n  value\nend\n")
+  writeFixture(t, lib, "lib.mygo", "package lib\nimport util \"example.invalid/typed-dep/util\"\nlet Value = 7\nfunc Add(a: Int, b: Int)\n  util.Identity(a + b)\nend\n")
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/typed-dep/lib\"\nfunc Use() -> Int\n  lib.Add(lib.Value, 1)\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/typed-dep/lib\"\nfunc Use() -> Int\n  lib.Add(lib.Value, 2)\nend\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-dependency-hit") == 0 || warm.SourcesCache.Get(lib).IsSome() || codegen3StageCount(warm, "parse") != 1 || codegen3StageCount(warm, "ffi") != 1 || codegen3StageCount(warm, "inference") != 1 then
+    t.Fatalf("dependency was not reused: hits=%d parse=%d ffi=%d inference=%d", codegen3StageCount(warm, "typed-dependency-hit"), codegen3StageCount(warm, "parse"), codegen3StageCount(warm, "ffi"), codegen3StageCount(warm, "inference"))
+  end
+  if warm.SourcesCache.Get(util).IsSome() || warm.Compiled.Get(util).IsNone() then t.Fatal("transitive dependency was parsed or not staged") end
+  let warmOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(warm, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  t.Setenv("MYGO_CACHE", "off")
+  let uncached = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off build: %v", err)
+    case Ok(_) => ()
+  end
+  let uncachedOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(uncached, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  if !bytes.Equal(warmOutput, uncachedOutput) then t.Fatal("cached and cache-off output differ") end
+  t.Setenv("MYGO_CACHE", cache)
+  let key = cold.PackageKeys.Get(lib).UnwrapOr("")
+  switch os.WriteFile(codegen3TypedSummaryPath(key, "main"), "corrupt" as Slice[Byte], 0o644 as os.FileMode)
+    case Err(err) => t.Fatalf("corrupt dependency summary: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/typed-dep/lib\"\nfunc Use() -> Int\n  lib.Add(lib.Value, 3)\nend\n")
+  let fallback = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, fallback, true)
+    case Err(err) => t.Fatalf("corrupt-summary fallback: %v", err)
+    case Ok(_) => ()
+  end
+  if fallback.SourcesCache.Get(lib).IsNone() then t.Fatal("corrupt dependency summary did not fall back to source") end
+end
+
+func TestCodegen3TypedDependencyInstanceParity(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/typed-instance\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create dependency: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", """package lib
+interface Render[A]
+  func Render(value: A) -> String
+end
+impl Int: Render[Int]
+  func Render(value: Int) -> String
+    "int"
+  end
+end
+func RenderInt(value: Int) -> String
+  value.Render()
+end
+""")
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/typed-instance/lib\"\nfunc Use() -> String\n  lib.RenderInt(1)\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  switch codegen3ReadVerifiedTypedSummary(lib, codegen3EarlyHitState(t, root), "main")
+    case None => t.Fatal("instance dependency summary missing")
+    case Some(summary) then
+      if summary.Instances.Len() == 0 || summary.DynamicMetadata == "" then t.Fatal("instance or dynamic metadata was lost") end
+    end
+  end
+  writeFixture(t, root, "main.mygo", "package main\nimport lib \"example.invalid/typed-instance/lib\"\nfunc Use() -> String\n  lib.RenderInt(2)\nend\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-dependency-hit") == 0 then t.Fatal("instance dependency was not reused") end
+  let warmOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(warm, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  t.Setenv("MYGO_CACHE", "off")
+  let uncached = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off build: %v", err)
+    case Ok(_) => ()
+  end
+  let uncachedOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(uncached, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  if !bytes.Equal(warmOutput, uncachedOutput) then t.Fatal("instance dependency changed generated output") end
+end
+
+func TestCodegen3TypedDependencySkipsMetadataRead(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/metadata-count\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("create dependency: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", """package lib
+interface Render[A]
+  func Render(value: A) -> String
+end
+impl Int: Render[Int]
+  func Render(value: Int) -> String
+    "int"
+  end
+end
+func RenderInt(value: Int) -> String
+  value.Render()
+end
+""")
+  let app = "package main\nimport lib \"example.invalid/metadata-count/lib\"\nfunc Use() -> String\n  lib.RenderInt(1)\nend\n"
+  writeFixture(t, root, "main.mygo", app)
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", app + "\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-dependency-hit") == 0 then t.Fatal("dependency summary was not used") end
+  if codegen3StageCount(warm, "metadata-read") != 0 then t.Fatal("typed dependency rebuilt importer metadata") end
+  t.Setenv("MYGO_CACHE", "off")
+  let uncached = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(uncached, "metadata-read") == 0 then t.Fatal("cache-off build did not record metadata reads") end
+end
+
+func TestCodegen3TypedDependencyDynamicBoxingParity(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/dynamic-cache\n\ngo 1.24\n")
+  let contracts = filepath.Join(root, "contracts")
+  let backend = filepath.Join(root, "backend")
+  [contracts, backend].Each(func(dir: String) -> ()
+    switch os.MkdirAll(dir, 0o755 as os.FileMode)
+      case Err(err) => t.Fatalf("create package: %v", err)
+      case Ok(_) => ()
+    end
+  end)
+  writeFixture(t, contracts, "anchor.go", "package contracts\n")
+  writeFixture(t, backend, "anchor.go", "package backend\n")
+  writeFixture(t, contracts, "contracts.mygo", "package contracts\ninterface Show[A]\n  func Show(value: A) -> String\nend\n")
+  writeFixture(t, backend, "backend.mygo", """package backend
+import contracts "example.invalid/dynamic-cache/contracts"
+struct Widget
+  Name: String
+end
+impl WidgetShow: contracts.Show[Widget]
+  func Show(value: Widget) -> String
+    value.Name
+  end
+end
+""")
+  let dynamicCall = "MygoDynamic" + "ShowCallShow"
+  let app = "package main\nimport backend \"example.invalid/dynamic-cache/backend\"\nimport contracts \"example.invalid/dynamic-cache/contracts\"\nfunc Use() -> String\n  let widget = backend.Widget { Name: \"hello\" }\n  let boxed = widget as contracts.Show\n  " + dynamicCall + "(boxed)\nend\nfunc main() -> ()\n  let _ = Use()\n  ()\nend\n"
+  writeFixture(t, root, "main.mygo", app)
+  let cold = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, cold, true)
+    case Err(err) => t.Fatalf("cold dynamic build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "main.mygo", app + "\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, warm, true)
+    case Err(err) => t.Fatalf("warm dynamic build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "typed-dependency-hit") == 0 then t.Fatal("dynamic dependencies were not reused") end
+  let warmOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(warm, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  let options = PipelineOptions { Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: "", NoPrelude: true }
+  switch buildCodegen3(root, options, false, ["-buildvcs=false", "-o", filepath.Join(root, "warm-app")])
+    case Err(err) then
+      let backendDir = bootstrapCodegen3OutputDir(cold, backend).Unwrap()
+      let generated = os.ReadFile(filepath.Join(backendDir, "zz_backend.gen.go")).UnwrapOr([] as Slice[Byte])
+      t.Fatalf("warm dynamic Go build: %v\nbackend:\n%s", err, generated)
+    end
+    case Ok(_) => ()
+  end
+  t.Setenv("MYGO_CACHE", "off")
+  let uncached = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, uncached, true)
+    case Err(err) => t.Fatalf("cache-off dynamic build: %v", err)
+    case Ok(_) => ()
+  end
+  let sourceOutput = os.ReadFile(filepath.Join(bootstrapCodegen3OutputDir(uncached, root).Unwrap(), "zz_main.gen.go")).Unwrap()
+  if !bytes.Equal(warmOutput, sourceOutput) then t.Fatal("dynamic boxing differs with caching disabled") end
+end
+
+func TestCodegen3ChangedImporterReusesTypedDependency(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/changed-importer\n\ngo 1.24\n")
+  let lib = filepath.Join(root, "lib")
+  let app = filepath.Join(root, "app")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("lib directory: %v", err)
+    case Ok(_) => ()
+  end
+  switch os.MkdirAll(app, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("app directory: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Value() -> Int\n  42\nend\n")
+  writeFixture(t, app, "app.mygo", "package app\n\nimport lib \"example.invalid/changed-importer/lib\"\n\nfunc Value() -> Int\n  lib.Value()\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch syncBootstrapMyGO3WithState(root, cold)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, app, "app.mygo", "package app\n\nimport lib \"example.invalid/changed-importer/lib\"\n\nfunc Value() -> Int\n  lib.Value() + 1\nend\n")
+  let warm = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(app, warm, true)
+    case Err(err) => t.Fatalf("changed importer: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "parse") != 1 || codegen3StageCount(warm, "ffi") != 1 ||
+    codegen3StageCount(warm, "inference") != 1 ||
+    codegen3StageCount(warm, "typed-dependency-hit") == 0 then
+    t.Fatalf("changed importer parse=%d ffi=%d inference=%d typed=%d; dependency must be reused from its summary",
+      codegen3StageCount(warm, "parse"), codegen3StageCount(warm, "ffi"),
+      codegen3StageCount(warm, "inference"),
+      codegen3StageCount(warm, "typed-dependency-hit"))
+  end
+end
+
+func TestCodegen3SummaryValidationReusesSharedDependencies(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/diamond\n\ngo 1.24\n")
+  let _ = ["base", "left", "right", "top"].Fold(0, func(count: Int, name: String) -> Int
+    switch os.MkdirAll(filepath.Join(root, name), 0o755 as os.FileMode)
+      case Err(err) => t.Fatalf("fixture directory: %v", err)
+      case Ok(_) => ()
+    end
+    count + 1
+  end)
+  writeFixture(t, filepath.Join(root, "base"), "base.mygo", "package base\n\nfunc Value() -> Int\n  1\nend\n")
+  writeFixture(t, filepath.Join(root, "left"), "left.mygo", "package left\n\nimport base \"example.invalid/diamond/base\"\n\nfunc Value() -> Int\n  base.Value()\nend\n")
+  writeFixture(t, filepath.Join(root, "right"), "right.mygo", "package right\n\nimport base \"example.invalid/diamond/base\"\n\nfunc Value() -> Int\n  base.Value()\nend\n")
+  writeFixture(t, filepath.Join(root, "top"), "top.mygo", "package top\n\nimport left \"example.invalid/diamond/left\"\nimport right \"example.invalid/diamond/right\"\n\nfunc Value() -> Int\n  left.Value() + right.Value()\nend\n")
+  let cold = codegen3EarlyHitState(t, root)
+  switch syncBootstrapMyGO3WithState(root, cold)
+    case Err(err) => t.Fatalf("cold graph: %v", err)
+    case Ok(_) => ()
+  end
+  let warm = codegen3EarlyHitState(t, root)
+  let top = filepath.Join(root, "top")
+  let fingerprint = codegen3SourceFingerprint(top, warm)
+  switch codegen3ReadPackageSummary(fingerprint)
+    case None => t.Fatal("top summary missing")
+    case Some(summary) then
+      if !codegen3ValidatePackageSummary(top, warm, summary, {}) then
+        t.Fatal("top summary did not validate")
+      end
+      var visiting: Map[String, Bool] = {}
+      visiting.Set(top, true)
+      if codegen3ValidatePackageSummary(top, warm, summary, visiting) then
+        t.Fatal("active dependency cycle was accepted from the validation memo")
+      end
+    end
+  end
+  if codegen3StageCount(warm, "summary-validation") != 4 ||
+    codegen3StageCount(warm, "source-digest") != 4 then
+    t.Fatalf("validations=%d digests=%d, want 4 each",
+      codegen3StageCount(warm, "summary-validation"), codegen3StageCount(warm, "source-digest"))
   end
 end
 
@@ -488,6 +1129,52 @@ func TestCodegen3CacheDisabled(t: Ref[testing.T]) -> ()
       if removed != 0i64 then
         t.Fatalf("removed = %d, want 0", removed)
       end
+    end
+  end
+end
+
+func TestCodegen3CacheOffKeepsOutputDirectoriesDistinct(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", "off")
+  let root = t.TempDir()
+  writeFixture(t, root, "go.mod", "module example.invalid/cache-off-dirs\n\ngo 1.24\n")
+  let first = filepath.Join(root, "first")
+  let second = filepath.Join(root, "second")
+  let app = filepath.Join(root, "app")
+  [first, second, app].Each(func(dir: String) -> ()
+    switch os.MkdirAll(dir, 0o755 as os.FileMode)
+      case Err(err) => t.Fatalf("create package: %v", err)
+      case Ok(_) => ()
+    end
+  end)
+  writeFixture(t, first, "anchor.go", "package first\n")
+  writeFixture(t, second, "anchor.go", "package second\n")
+  writeFixture(t, first, "first.mygo", "package first\nfunc Value() -> Int\n  1\nend\n")
+  writeFixture(t, second, "second.mygo", "package second\nfunc Value() -> Int\n  2\nend\n")
+  writeFixture(t, app, "main.mygo", "package main\nimport first \"example.invalid/cache-off-dirs/first\"\nimport second \"example.invalid/cache-off-dirs/second\"\nfunc main() -> ()\n  let _ = first.Value() + second.Value()\n  ()\nend\n")
+  let state = codegen3EarlyHitState(t, root)
+  state.CacheEnabled = false
+  state.CacheRoot = ""
+  switch compileAbsoluteBootstrapDir(app, state, true)
+    case Err(err) => t.Fatalf("cache-off build: %v", err)
+    case Ok(_) => ()
+  end
+  let appDir = bootstrapCodegen3OutputDir(state, app).Unwrap()
+  let firstDir = bootstrapCodegen3OutputDir(state, first).Unwrap()
+  let secondDir = bootstrapCodegen3OutputDir(state, second).Unwrap()
+  if appDir == firstDir || appDir == secondDir || firstDir == secondDir then
+    t.Fatalf("cache-off output directories collide: app=%s first=%s second=%s", appDir, firstDir, secondDir)
+  end
+  switch codegen3ManifestRecords(state.ManifestPath)
+    case Err(err) => t.Fatalf("read manifest: %v", err)
+    case Ok(records) then
+      let mismatches = records.Fold("", func(acc: String, record: codegen3ManifestRecord) -> String
+        let relative = filepath.Rel(root, record.Dir).UnwrapOr("")
+        let expected = filepath.Join(state.BuildRoot, relative) + "/"
+        record.Files.Fold(acc, func(text: String, file: String) -> String
+          if file.HasPrefix(expected) then text else text + "\n" + record.Dir + " -> " + file end
+        end)
+      end)
+      if mismatches != "" then t.Fatalf("cache-off manifest contains foreign files:%s", mismatches) end
     end
   end
 end

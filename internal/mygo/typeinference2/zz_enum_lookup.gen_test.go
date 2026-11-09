@@ -131,14 +131,14 @@ import . "github.com/mygo-lang/mygo/prelude"
 								t.Fatalf("%s", "package b enum index build failed")
  /*line zz_enum_lookup.gen_test.go:132:1*/							} else {
  /*line enum_lookup_test.mygo:107:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[map[string]EnumDeclIndexEntry]); ok {
-									packages := []MyGoPackageInfo{MyGoPackageInfo{Alias: "a", Path: "example.com/a", Decls: __mygo_match___mygo_expr_1.F0.Decls, DynamicMetadataJSON: "", EnumIndex: Some[map[string]EnumDeclIndexEntry](__mygo_match___mygo_expr_5.F0), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_1.F0.Decls)}, MyGoPackageInfo{Alias: "b", Path: "example.com/b", Decls: __mygo_match___mygo_expr_3.F0.Decls, DynamicMetadataJSON: "", EnumIndex: Some[map[string]EnumDeclIndexEntry](__mygo_match___mygo_expr_7.F0), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_3.F0.Decls)}}
- /*line enum_lookup_test.mygo:128:19*/									__mygo_expr_8 := lookupEnumVariantDeclInPackagesByPath(packages, "example.com/a", "Shared", "FromA")
+									packages := []MyGoPackageInfo{MyGoPackageInfo{Alias: "a", Path: "example.com/a", Decls: __mygo_match___mygo_expr_1.F0.Decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: Some[map[string]EnumDeclIndexEntry](__mygo_match___mygo_expr_5.F0), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_1.F0.Decls)}, MyGoPackageInfo{Alias: "b", Path: "example.com/b", Decls: __mygo_match___mygo_expr_3.F0.Decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: Some[map[string]EnumDeclIndexEntry](__mygo_match___mygo_expr_7.F0), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_3.F0.Decls)}}
+ /*line enum_lookup_test.mygo:130:19*/									__mygo_expr_8 := lookupEnumVariantDeclInPackagesByPath(packages, "example.com/a", "Shared", "FromA")
 									if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Option__Some[ast2.Variant]); ok {
- /*line enum_lookup_test.mygo:135:26*/										if __mygo_match___mygo_expr_9.F0.Name != "FromA" {
- /*line enum_lookup_test.mygo:136:25*/											t.Fatalf("package a variant = %s, want FromA", __mygo_match___mygo_expr_9.F0.Name)
- /*line enum_lookup_test.mygo:128:19*/										} else {
+ /*line enum_lookup_test.mygo:137:26*/										if __mygo_match___mygo_expr_9.F0.Name != "FromA" {
+ /*line enum_lookup_test.mygo:138:25*/											t.Fatalf("package a variant = %s, want FromA", __mygo_match___mygo_expr_9.F0.Name)
+ /*line enum_lookup_test.mygo:130:19*/										} else {
  /*line zz_enum_lookup.gen_test.go:140:1*/										}
- /*line enum_lookup_test.mygo:128:19*/									} else {
+ /*line enum_lookup_test.mygo:130:19*/									} else {
 										if _, ok := __mygo_expr_8.(Option__None[ast2.Variant]); ok {
 											t.Fatalf("%s", "package a variant missing")
 										} else {

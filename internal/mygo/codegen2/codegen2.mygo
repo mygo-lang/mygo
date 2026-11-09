@@ -215,6 +215,15 @@ func appendDynamicDispatchFile(
   appendDynamicDispatchFileBridge(outputs, files, dependencies)
 end
 
+# Shared dynamic-dispatch support is emitted alongside either backend's Go.
+func AppendDynamicDispatchFileDiagnostic(
+  outputs: Map[String, String],
+  files: Slice[SourceFileInput],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[Map[String, String], ast2.Diagnostic]
+  appendDynamicDispatchFile(outputs, files, dependencies)
+end
+
 func appendDynamicMetadataFileBridge(
   outputs: Map[String, String],
   files: Slice[SourceFileInput],

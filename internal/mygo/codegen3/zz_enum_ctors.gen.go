@@ -112,7 +112,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			var __mygo_expr_13 Option[string]
 			if __mygo_match___mygo_expr_14, ok := __mygo_expr_12.(Option__Some[string]); ok {
  /*line enum_ctors.mygo:322:15*/				var __mygo_expr_15 Option[string]
- /*line enum_ctors.mygo:380:3*/				if __mygo_match___mygo_expr_14.F0 == __mygo_match___mygo_expr_11.F0 {
+ /*line enum_ctors.mygo:362:3*/				if __mygo_match___mygo_expr_14.F0 == __mygo_match___mygo_expr_11.F0 {
  /*line enum_ctors.mygo:322:15*/					__mygo_expr_15 = Some[string](__mygo_match___mygo_expr_11.F0 + "__" + __mygo_match___mygo_expr_2.F1)
 				} else {
 					__mygo_expr_15 = None[string]()
@@ -127,26 +127,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line enum_ctors.mygo:318:7*/			__mygo_expr_4 = __mygo_expr_13
  /*line zz_enum_ctors.gen.go:128:1*/		} else {
  /*line enum_ctors.mygo:318:7*/			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line enum_ctors.mygo:337:11*/				var __mygo_expr_10 Option[string]
- /*line enum_ctors.mygo:337:14*/				if qualifiedEnumMatches(typ, __mygo_match___mygo_expr_5.F1) {
- /*line enum_ctors.mygo:338:13*/					__mygo_expr_6 := (*__mygo_match___mygo_expr_5.F0).Kind
-					var __mygo_expr_7 Option[string]
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ir3.ExprKind__VarExpr); ok {
+ /*line enum_ctors.mygo:337:11*/				__mygo_expr_6 := (*__mygo_match___mygo_expr_5.F0).Kind
+				var __mygo_expr_7 Option[string]
+				if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ir3.ExprKind__VarExpr); ok {
+ /*line enum_ctors.mygo:339:15*/					var __mygo_expr_10 Option[string]
+ /*line enum_ctors.mygo:339:18*/					if qualifiedEnumMatches(typ, __mygo_match___mygo_expr_8.F0, __mygo_match___mygo_expr_5.F1, __mygo_match___mygo_expr_2.F1) {
  /*line enum_ctors.mygo:340:17*/						var __mygo_expr_9 Option[string]
  /*line enum_ctors.mygo:340:20*/						if isCanonicalAlias(__mygo_match___mygo_expr_8.F0) {
  /*line enum_ctors.mygo:340:17*/							__mygo_expr_9 = Some[string](__mygo_match___mygo_expr_8.F0 + "." + __mygo_match___mygo_expr_5.F1 + "__" + __mygo_match___mygo_expr_2.F1)
  /*line zz_enum_ctors.gen.go:138:1*/						} else {
  /*line enum_ctors.mygo:340:17*/							__mygo_expr_9 = Some[string](__mygo_match___mygo_expr_8.F0 + "." + __mygo_match___mygo_expr_5.F1 + "__" + __mygo_match___mygo_expr_2.F1 + "__Ctor")
  /*line zz_enum_ctors.gen.go:140:1*/						}
- /*line enum_ctors.mygo:338:13*/						__mygo_expr_7 = __mygo_expr_9
+ /*line enum_ctors.mygo:339:15*/						__mygo_expr_10 = __mygo_expr_9
 					} else {
-						__mygo_expr_7 = None[string]()
+						__mygo_expr_10 = None[string]()
  /*line zz_enum_ctors.gen.go:144:1*/					}
- /*line enum_ctors.mygo:337:11*/					__mygo_expr_10 = __mygo_expr_7
+ /*line enum_ctors.mygo:337:11*/					__mygo_expr_7 = __mygo_expr_10
 				} else {
-					__mygo_expr_10 = None[string]()
+					__mygo_expr_7 = None[string]()
  /*line zz_enum_ctors.gen.go:148:1*/				}
- /*line enum_ctors.mygo:318:7*/				__mygo_expr_4 = __mygo_expr_10
+ /*line enum_ctors.mygo:318:7*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
 				__mygo_expr_4 = None[string]()
  /*line zz_enum_ctors.gen.go:152:1*/			}
@@ -157,216 +157,295 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_enum_ctors.gen.go:157:1*/	}
  /*line enum_ctors.mygo:316:3*/	return __mygo_expr_1
  /*line zz_enum_ctors.gen.go:159:1*/}
- /*line enum_ctors.mygo:361:1*/func qualifiedEnumMatches(typ Option[ast2.MonoType], enumName string) bool {
+ /*line enum_ctors.mygo:361:1*/func qualifiedEnumMatches(typ Option[ast2.MonoType], alias string, enumName string, variant string) bool {
  /*line enum_ctors.mygo:362:3*/	var __mygo_expr_0 bool
-	if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
-		if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TQualifiedName); ok {
- /*line enum_ctors.mygo:364:7*/			__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
-			var __mygo_expr_4 bool
-			if __mygo_match___mygo_expr_9, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
-				__mygo_expr_4 = __mygo_match___mygo_expr_9.F0 == enumName
+	if __mygo_match___mygo_expr_8, ok := typ.(Option__Some[ast2.MonoType]); ok {
+		if __mygo_match___mygo_expr_9, ok := __mygo_match___mygo_expr_8.F0.(ast2.MonoType__TQualifiedName); ok {
+ /*line enum_ctors.mygo:364:7*/			__mygo_expr_10 := *__mygo_match___mygo_expr_9.F1
+			var __mygo_expr_11 bool
+			if __mygo_match___mygo_expr_16, ok := __mygo_expr_10.(ast2.MonoType__TCon); ok {
+				__mygo_expr_11 = __mygo_match___mygo_expr_16.F0 == enumName
  /*line zz_enum_ctors.gen.go:168:1*/			} else {
- /*line enum_ctors.mygo:364:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:367:11*/					__mygo_expr_6 := *__mygo_match___mygo_expr_5.F0
-					var __mygo_expr_7 bool
-					if __mygo_match___mygo_expr_8, ok := __mygo_expr_6.(ast2.MonoType__TCon); ok {
-						__mygo_expr_7 = __mygo_match___mygo_expr_8.F0 == enumName
+ /*line enum_ctors.mygo:364:7*/				if __mygo_match___mygo_expr_12, ok := __mygo_expr_10.(ast2.MonoType__TApp); ok {
+ /*line enum_ctors.mygo:367:11*/					__mygo_expr_13 := *__mygo_match___mygo_expr_12.F0
+					var __mygo_expr_14 bool
+					if __mygo_match___mygo_expr_15, ok := __mygo_expr_13.(ast2.MonoType__TCon); ok {
+						__mygo_expr_14 = __mygo_match___mygo_expr_15.F0 == enumName
 					} else {
-						__mygo_expr_7 = false
+						__mygo_expr_14 = false
  /*line zz_enum_ctors.gen.go:176:1*/					}
- /*line enum_ctors.mygo:364:7*/					__mygo_expr_4 = __mygo_expr_7
+ /*line enum_ctors.mygo:364:7*/					__mygo_expr_11 = __mygo_expr_14
 				} else {
-					__mygo_expr_4 = false
+					__mygo_expr_11 = false
  /*line zz_enum_ctors.gen.go:180:1*/				}
 			}
- /*line enum_ctors.mygo:362:3*/			__mygo_expr_0 = __mygo_expr_4
+ /*line enum_ctors.mygo:362:3*/			__mygo_expr_0 = __mygo_expr_11
+ /*line zz_enum_ctors.gen.go:183:1*/		} else {
+ /*line enum_ctors.mygo:362:3*/			if __mygo_match___mygo_expr_6, ok := typ.(Option__Some[ast2.MonoType]); ok {
+				if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TCon); ok {
+					__mygo_expr_0 = __mygo_match___mygo_expr_7.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+ /*line zz_enum_ctors.gen.go:187:1*/				} else {
+ /*line enum_ctors.mygo:362:3*/					if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+						if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
+ /*line enum_ctors.mygo:377:7*/							__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+							var __mygo_expr_4 bool
+							if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+								__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+							} else {
+								__mygo_expr_4 = false
+ /*line zz_enum_ctors.gen.go:196:1*/							}
+ /*line enum_ctors.mygo:362:3*/							__mygo_expr_0 = __mygo_expr_4
+						} else {
+							__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:200:1*/						}
+ /*line enum_ctors.mygo:362:3*/					} else {
+						__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:203:1*/					}
+				}
+			} else {
+ /*line enum_ctors.mygo:362:3*/				if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
+ /*line enum_ctors.mygo:377:7*/						__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+						var __mygo_expr_4 bool
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+							__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+						} else {
+							__mygo_expr_4 = false
+ /*line zz_enum_ctors.gen.go:214:1*/						}
+ /*line enum_ctors.mygo:362:3*/						__mygo_expr_0 = __mygo_expr_4
+					} else {
+						__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:218:1*/					}
+ /*line enum_ctors.mygo:362:3*/				} else {
+					__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:221:1*/				}
+			}
+		}
+	} else {
+ /*line enum_ctors.mygo:362:3*/		if __mygo_match___mygo_expr_6, ok := typ.(Option__Some[ast2.MonoType]); ok {
+			if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TCon); ok {
+				__mygo_expr_0 = __mygo_match___mygo_expr_7.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+ /*line zz_enum_ctors.gen.go:228:1*/			} else {
+ /*line enum_ctors.mygo:362:3*/				if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+					if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
+ /*line enum_ctors.mygo:377:7*/						__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+						var __mygo_expr_4 bool
+						if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+							__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+						} else {
+							__mygo_expr_4 = false
+ /*line zz_enum_ctors.gen.go:237:1*/						}
+ /*line enum_ctors.mygo:362:3*/						__mygo_expr_0 = __mygo_expr_4
+					} else {
+						__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:241:1*/					}
+ /*line enum_ctors.mygo:362:3*/				} else {
+					__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:244:1*/				}
+			}
 		} else {
-			__mygo_expr_0 = false
- /*line zz_enum_ctors.gen.go:185:1*/		}
- /*line enum_ctors.mygo:362:3*/	} else {
-		__mygo_expr_0 = false
- /*line zz_enum_ctors.gen.go:188:1*/	}
+ /*line enum_ctors.mygo:362:3*/			if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+				if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
+ /*line enum_ctors.mygo:377:7*/					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+					var __mygo_expr_4 bool
+					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
+						__mygo_expr_4 = __mygo_match___mygo_expr_5.F0 == alias+"."+enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+					} else {
+						__mygo_expr_4 = false
+ /*line zz_enum_ctors.gen.go:255:1*/					}
+ /*line enum_ctors.mygo:362:3*/					__mygo_expr_0 = __mygo_expr_4
+				} else {
+					__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:259:1*/				}
+ /*line enum_ctors.mygo:362:3*/			} else {
+				__mygo_expr_0 = false
+ /*line zz_enum_ctors.gen.go:262:1*/			}
+		}
+	}
  /*line enum_ctors.mygo:362:3*/	return __mygo_expr_0
- /*line zz_enum_ctors.gen.go:190:1*/}
- /*line enum_ctors.mygo:379:1*/func enumRootName(typ Option[ast2.MonoType]) Option[string] {
- /*line enum_ctors.mygo:380:3*/	var __mygo_expr_0 Option[string]
+ /*line zz_enum_ctors.gen.go:266:1*/}
+ /*line enum_ctors.mygo:389:1*/func importedEnumHasVariant(alias string, enumName string, variant string, index int) bool {
+	return __mygo_mt_codegen3_importedEnumHasVariant(alias, enumName, variant, index, 0)
+ /*line zz_enum_ctors.gen.go:269:1*/}
+ /*line enum_ctors.mygo:409:1*/func enumRootName(typ Option[ast2.MonoType]) Option[string] {
+ /*line enum_ctors.mygo:410:3*/	var __mygo_expr_0 Option[string]
 	if __mygo_match___mygo_expr_6, ok := typ.(Option__Some[ast2.MonoType]); ok {
 		if __mygo_match___mygo_expr_7, ok := __mygo_match___mygo_expr_6.F0.(ast2.MonoType__TCon); ok {
 			__mygo_expr_0 = Some[string](__mygo_match___mygo_expr_7.F0)
- /*line zz_enum_ctors.gen.go:196:1*/		} else {
- /*line enum_ctors.mygo:380:3*/			if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line zz_enum_ctors.gen.go:275:1*/		} else {
+ /*line enum_ctors.mygo:410:3*/			if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:383:7*/					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+ /*line enum_ctors.mygo:413:7*/					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
 					var __mygo_expr_4 Option[string]
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
 						__mygo_expr_4 = Some[string](__mygo_match___mygo_expr_5.F0)
 					} else {
 						__mygo_expr_4 = None[string]()
- /*line zz_enum_ctors.gen.go:205:1*/					}
- /*line enum_ctors.mygo:380:3*/					__mygo_expr_0 = __mygo_expr_4
+ /*line zz_enum_ctors.gen.go:284:1*/					}
+ /*line enum_ctors.mygo:410:3*/					__mygo_expr_0 = __mygo_expr_4
 				} else {
 					__mygo_expr_0 = None[string]()
- /*line zz_enum_ctors.gen.go:209:1*/				}
- /*line enum_ctors.mygo:380:3*/			} else {
+ /*line zz_enum_ctors.gen.go:288:1*/				}
+ /*line enum_ctors.mygo:410:3*/			} else {
 				__mygo_expr_0 = None[string]()
- /*line zz_enum_ctors.gen.go:212:1*/			}
+ /*line zz_enum_ctors.gen.go:291:1*/			}
 		}
 	} else {
- /*line enum_ctors.mygo:380:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line enum_ctors.mygo:410:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:383:7*/				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
+ /*line enum_ctors.mygo:413:7*/				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F0
 				var __mygo_expr_4 Option[string]
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TCon); ok {
 					__mygo_expr_4 = Some[string](__mygo_match___mygo_expr_5.F0)
 				} else {
 					__mygo_expr_4 = None[string]()
- /*line zz_enum_ctors.gen.go:223:1*/				}
- /*line enum_ctors.mygo:380:3*/				__mygo_expr_0 = __mygo_expr_4
+ /*line zz_enum_ctors.gen.go:302:1*/				}
+ /*line enum_ctors.mygo:410:3*/				__mygo_expr_0 = __mygo_expr_4
 			} else {
 				__mygo_expr_0 = None[string]()
- /*line zz_enum_ctors.gen.go:227:1*/			}
- /*line enum_ctors.mygo:380:3*/		} else {
+ /*line zz_enum_ctors.gen.go:306:1*/			}
+ /*line enum_ctors.mygo:410:3*/		} else {
 			__mygo_expr_0 = None[string]()
- /*line zz_enum_ctors.gen.go:230:1*/		}
+ /*line zz_enum_ctors.gen.go:309:1*/		}
 	}
- /*line enum_ctors.mygo:380:3*/	return __mygo_expr_0
- /*line zz_enum_ctors.gen.go:233:1*/}
- /*line enum_ctors.mygo:392:1*/func enumTypeArgsText(typ Option[ast2.MonoType]) string {
- /*line enum_ctors.mygo:393:3*/	var __mygo_expr_0 string
+ /*line enum_ctors.mygo:410:3*/	return __mygo_expr_0
+ /*line zz_enum_ctors.gen.go:312:1*/}
+ /*line enum_ctors.mygo:422:1*/func enumTypeArgsText(typ Option[ast2.MonoType]) string {
+ /*line enum_ctors.mygo:423:3*/	var __mygo_expr_0 string
 	if __mygo_match___mygo_expr_7, ok := typ.(Option__Some[ast2.MonoType]); ok {
 		if __mygo_match___mygo_expr_8, ok := __mygo_match___mygo_expr_7.F0.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:395:7*/			var __mygo_expr_9 string
- /*line enum_ctors.mygo:395:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F1) == 0 {
- /*line enum_ctors.mygo:395:7*/				__mygo_expr_9 = ""
- /*line zz_enum_ctors.gen.go:241:1*/			} else {
- /*line enum_ctors.mygo:395:7*/				__mygo_expr_9 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_8.F1, 0, "") + "]"
- /*line zz_enum_ctors.gen.go:243:1*/			}
- /*line enum_ctors.mygo:393:3*/			__mygo_expr_0 = __mygo_expr_9
- /*line zz_enum_ctors.gen.go:245:1*/		} else {
- /*line enum_ctors.mygo:393:3*/			if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line enum_ctors.mygo:425:7*/			var __mygo_expr_9 string
+ /*line enum_ctors.mygo:425:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F1) == 0 {
+ /*line enum_ctors.mygo:425:7*/				__mygo_expr_9 = ""
+ /*line zz_enum_ctors.gen.go:320:1*/			} else {
+ /*line enum_ctors.mygo:425:7*/				__mygo_expr_9 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_8.F1, 0, "") + "]"
+ /*line zz_enum_ctors.gen.go:322:1*/			}
+ /*line enum_ctors.mygo:423:3*/			__mygo_expr_0 = __mygo_expr_9
+ /*line zz_enum_ctors.gen.go:324:1*/		} else {
+ /*line enum_ctors.mygo:423:3*/			if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 				if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TQualifiedName); ok {
- /*line enum_ctors.mygo:402:7*/					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
+ /*line enum_ctors.mygo:432:7*/					__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
 					var __mygo_expr_4 string
 					if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:404:11*/						var __mygo_expr_6 string
- /*line enum_ctors.mygo:404:14*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) == 0 {
- /*line enum_ctors.mygo:404:11*/							__mygo_expr_6 = ""
- /*line zz_enum_ctors.gen.go:254:1*/						} else {
- /*line enum_ctors.mygo:404:11*/							__mygo_expr_6 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_5.F1, 0, "") + "]"
- /*line zz_enum_ctors.gen.go:256:1*/						}
- /*line enum_ctors.mygo:402:7*/						__mygo_expr_4 = __mygo_expr_6
+ /*line enum_ctors.mygo:434:11*/						var __mygo_expr_6 string
+ /*line enum_ctors.mygo:434:14*/						if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) == 0 {
+ /*line enum_ctors.mygo:434:11*/							__mygo_expr_6 = ""
+ /*line zz_enum_ctors.gen.go:333:1*/						} else {
+ /*line enum_ctors.mygo:434:11*/							__mygo_expr_6 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_5.F1, 0, "") + "]"
+ /*line zz_enum_ctors.gen.go:335:1*/						}
+ /*line enum_ctors.mygo:432:7*/						__mygo_expr_4 = __mygo_expr_6
 					} else {
 						__mygo_expr_4 = ""
- /*line zz_enum_ctors.gen.go:260:1*/					}
- /*line enum_ctors.mygo:393:3*/					__mygo_expr_0 = __mygo_expr_4
+ /*line zz_enum_ctors.gen.go:339:1*/					}
+ /*line enum_ctors.mygo:423:3*/					__mygo_expr_0 = __mygo_expr_4
 				} else {
 					__mygo_expr_0 = ""
- /*line zz_enum_ctors.gen.go:264:1*/				}
- /*line enum_ctors.mygo:393:3*/			} else {
+ /*line zz_enum_ctors.gen.go:343:1*/				}
+ /*line enum_ctors.mygo:423:3*/			} else {
 				__mygo_expr_0 = ""
- /*line zz_enum_ctors.gen.go:267:1*/			}
+ /*line zz_enum_ctors.gen.go:346:1*/			}
 		}
 	} else {
- /*line enum_ctors.mygo:393:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
+ /*line enum_ctors.mygo:423:3*/		if __mygo_match___mygo_expr_1, ok := typ.(Option__Some[ast2.MonoType]); ok {
 			if __mygo_match___mygo_expr_2, ok := __mygo_match___mygo_expr_1.F0.(ast2.MonoType__TQualifiedName); ok {
- /*line enum_ctors.mygo:402:7*/				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
+ /*line enum_ctors.mygo:432:7*/				__mygo_expr_3 := *__mygo_match___mygo_expr_2.F1
 				var __mygo_expr_4 string
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ast2.MonoType__TApp); ok {
- /*line enum_ctors.mygo:404:11*/					var __mygo_expr_6 string
- /*line enum_ctors.mygo:404:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) == 0 {
- /*line enum_ctors.mygo:404:11*/						__mygo_expr_6 = ""
- /*line zz_enum_ctors.gen.go:278:1*/					} else {
- /*line enum_ctors.mygo:404:11*/						__mygo_expr_6 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_5.F1, 0, "") + "]"
- /*line zz_enum_ctors.gen.go:280:1*/					}
- /*line enum_ctors.mygo:402:7*/					__mygo_expr_4 = __mygo_expr_6
+ /*line enum_ctors.mygo:434:11*/					var __mygo_expr_6 string
+ /*line enum_ctors.mygo:434:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_5.F1) == 0 {
+ /*line enum_ctors.mygo:434:11*/						__mygo_expr_6 = ""
+ /*line zz_enum_ctors.gen.go:357:1*/					} else {
+ /*line enum_ctors.mygo:434:11*/						__mygo_expr_6 = "[" + goAppliedArgsText(__mygo_match___mygo_expr_5.F1, 0, "") + "]"
+ /*line zz_enum_ctors.gen.go:359:1*/					}
+ /*line enum_ctors.mygo:432:7*/					__mygo_expr_4 = __mygo_expr_6
 				} else {
 					__mygo_expr_4 = ""
- /*line zz_enum_ctors.gen.go:284:1*/				}
- /*line enum_ctors.mygo:393:3*/				__mygo_expr_0 = __mygo_expr_4
+ /*line zz_enum_ctors.gen.go:363:1*/				}
+ /*line enum_ctors.mygo:423:3*/				__mygo_expr_0 = __mygo_expr_4
 			} else {
 				__mygo_expr_0 = ""
- /*line zz_enum_ctors.gen.go:288:1*/			}
- /*line enum_ctors.mygo:393:3*/		} else {
+ /*line zz_enum_ctors.gen.go:367:1*/			}
+ /*line enum_ctors.mygo:423:3*/		} else {
 			__mygo_expr_0 = ""
- /*line zz_enum_ctors.gen.go:291:1*/		}
+ /*line zz_enum_ctors.gen.go:370:1*/		}
 	}
- /*line enum_ctors.mygo:393:3*/	return __mygo_expr_0
- /*line zz_enum_ctors.gen.go:294:1*/}
- /*line enum_ctors.mygo:417:1*/func goAppliedArgsText(args []ast2.MonoType, index int, out string) string {
+ /*line enum_ctors.mygo:423:3*/	return __mygo_expr_0
+ /*line zz_enum_ctors.gen.go:373:1*/}
+ /*line enum_ctors.mygo:447:1*/func goAppliedArgsText(args []ast2.MonoType, index int, out string) string {
 	return __mygo_mt_codegen3_goAppliedArgsText(args, index, out, 0)
- /*line zz_enum_ctors.gen.go:297:1*/}
- /*line enum_ctors.mygo:438:1*/func enumCtorApply(expr ir3.Expr, callee ir3.Expr, args []ir3.Expr) Result[Option[goast.Expr], string] {
- /*line enum_ctors.mygo:443:3*/	__mygo_expr_0 := qualifiedVariant(callee, expr.Type)
+ /*line zz_enum_ctors.gen.go:376:1*/}
+ /*line enum_ctors.mygo:468:1*/func enumCtorApply(expr ir3.Expr, callee ir3.Expr, args []ir3.Expr) Result[Option[goast.Expr], string] {
+ /*line enum_ctors.mygo:473:3*/	__mygo_expr_0 := qualifiedVariant(callee, expr.Type)
 	var __mygo_expr_1 Result[Option[goast.Expr], string]
 	if _, ok := __mygo_expr_0.(Option__None[string]); ok {
 		__mygo_expr_1 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_enum_ctors.gen.go:303:1*/	} else {
- /*line enum_ctors.mygo:443:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
- /*line enum_ctors.mygo:446:7*/			__mygo_expr_3 := goCallArgs(args, 0, []goast.Expr{})
+ /*line zz_enum_ctors.gen.go:382:1*/	} else {
+ /*line enum_ctors.mygo:473:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Option__Some[string]); ok {
+ /*line enum_ctors.mygo:476:7*/			__mygo_expr_3 := goCallArgs(args, 0, []goast.Expr{})
 			var __mygo_expr_4 Result[Option[goast.Expr], string]
 			if __mygo_match___mygo_expr_6, ok := __mygo_expr_3.(Result__Err[[]goast.Expr, string]); ok {
 				__mygo_expr_4 = Err[Option[goast.Expr], string](__mygo_match___mygo_expr_6.F0)
- /*line zz_enum_ctors.gen.go:309:1*/			} else {
- /*line enum_ctors.mygo:446:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Expr, string]); ok {
+ /*line zz_enum_ctors.gen.go:388:1*/			} else {
+ /*line enum_ctors.mygo:476:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Result__Ok[[]goast.Expr, string]); ok {
 					__mygo_expr_4 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.Call(goast.MustExpr(__mygo_match___mygo_expr_2.F0+enumTypeArgsText(expr.Type)), __mygo_match___mygo_expr_5.F0)))
 				} else {
- /*line zz_enum_ctors.gen.go:313:1*/				}
+ /*line zz_enum_ctors.gen.go:392:1*/				}
 			}
- /*line enum_ctors.mygo:443:3*/			__mygo_expr_1 = __mygo_expr_4
+ /*line enum_ctors.mygo:473:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
- /*line zz_enum_ctors.gen.go:317:1*/		}
+ /*line zz_enum_ctors.gen.go:396:1*/		}
 	}
- /*line enum_ctors.mygo:443:3*/	return __mygo_expr_1
- /*line zz_enum_ctors.gen.go:320:1*/}
- /*line enum_ctors.mygo:459:1*/func enumCtorValue(expr ir3.Expr, receiver ir3.Expr, variant string) Result[Option[goast.Expr], string] {
- /*line enum_ctors.mygo:464:3*/	__mygo_expr_0 := receiver.Kind
+ /*line enum_ctors.mygo:473:3*/	return __mygo_expr_1
+ /*line zz_enum_ctors.gen.go:399:1*/}
+ /*line enum_ctors.mygo:489:1*/func enumCtorValue(expr ir3.Expr, receiver ir3.Expr, variant string) Result[Option[goast.Expr], string] {
+ /*line enum_ctors.mygo:494:3*/	__mygo_expr_0 := receiver.Kind
 	var __mygo_expr_1 Result[Option[goast.Expr], string]
 	if __mygo_match___mygo_expr_8, ok := __mygo_expr_0.(ir3.ExprKind__VarExpr); ok {
- /*line enum_ctors.mygo:466:7*/		__mygo_expr_9 := enumRootName(expr.Type)
+ /*line enum_ctors.mygo:496:7*/		__mygo_expr_9 := enumRootName(expr.Type)
 		var __mygo_expr_10 Result[Option[goast.Expr], string]
 		if __mygo_match___mygo_expr_11, ok := __mygo_expr_9.(Option__Some[string]); ok {
- /*line enum_ctors.mygo:468:11*/			var __mygo_expr_12 Result[Option[goast.Expr], string]
- /*line zz_enum_ctors.gen.go:329:1*/			if __mygo_match___mygo_expr_11.F0 == __mygo_match___mygo_expr_8.F0 {
- /*line enum_ctors.mygo:468:11*/				__mygo_expr_12 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(enumCtorName(__mygo_match___mygo_expr_8.F0, variant) + enumTypeArgsText(expr.Type) + "()")))
+ /*line enum_ctors.mygo:498:11*/			var __mygo_expr_12 Result[Option[goast.Expr], string]
+ /*line zz_enum_ctors.gen.go:408:1*/			if __mygo_match___mygo_expr_11.F0 == __mygo_match___mygo_expr_8.F0 {
+ /*line enum_ctors.mygo:498:11*/				__mygo_expr_12 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(enumCtorName(__mygo_match___mygo_expr_8.F0, variant) + enumTypeArgsText(expr.Type) + "()")))
 			} else {
 				__mygo_expr_12 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_enum_ctors.gen.go:333:1*/			}
- /*line enum_ctors.mygo:466:7*/			__mygo_expr_10 = __mygo_expr_12
+ /*line zz_enum_ctors.gen.go:412:1*/			}
+ /*line enum_ctors.mygo:496:7*/			__mygo_expr_10 = __mygo_expr_12
 		} else {
 			if _, ok := __mygo_expr_9.(Option__None[string]); ok {
 				__mygo_expr_10 = Ok[Option[goast.Expr], string](None[goast.Expr]())
 			} else {
- /*line zz_enum_ctors.gen.go:339:1*/			}
+ /*line zz_enum_ctors.gen.go:418:1*/			}
 		}
- /*line enum_ctors.mygo:464:3*/		__mygo_expr_1 = __mygo_expr_10
- /*line zz_enum_ctors.gen.go:342:1*/	} else {
- /*line enum_ctors.mygo:464:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
- /*line enum_ctors.mygo:479:7*/			var __mygo_expr_7 Result[Option[goast.Expr], string]
- /*line enum_ctors.mygo:479:10*/			if qualifiedEnumMatches(expr.Type, __mygo_match___mygo_expr_2.F1) {
- /*line enum_ctors.mygo:480:9*/				__mygo_expr_3 := (*__mygo_match___mygo_expr_2.F0).Kind
-				var __mygo_expr_4 Result[Option[goast.Expr], string]
-				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ir3.ExprKind__VarExpr); ok {
- /*line enum_ctors.mygo:482:13*/					var __mygo_expr_6 Result[Option[goast.Expr], string]
- /*line enum_ctors.mygo:482:16*/					if isCanonicalAlias(__mygo_match___mygo_expr_5.F0) {
- /*line enum_ctors.mygo:482:13*/						__mygo_expr_6 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(__mygo_match___mygo_expr_5.F0 + "." + __mygo_match___mygo_expr_2.F1 + "__" + variant + "()")))
- /*line zz_enum_ctors.gen.go:352:1*/					} else {
- /*line enum_ctors.mygo:482:13*/						__mygo_expr_6 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(__mygo_match___mygo_expr_5.F0 + "." + __mygo_match___mygo_expr_2.F1 + "__" + variant + "__Ctor()")))
- /*line zz_enum_ctors.gen.go:354:1*/					}
- /*line enum_ctors.mygo:480:9*/					__mygo_expr_4 = __mygo_expr_6
+ /*line enum_ctors.mygo:494:3*/		__mygo_expr_1 = __mygo_expr_10
+ /*line zz_enum_ctors.gen.go:421:1*/	} else {
+ /*line enum_ctors.mygo:494:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(ir3.ExprKind__FieldNamedExpr); ok {
+ /*line enum_ctors.mygo:509:7*/			__mygo_expr_3 := (*__mygo_match___mygo_expr_2.F0).Kind
+			var __mygo_expr_4 Result[Option[goast.Expr], string]
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(ir3.ExprKind__VarExpr); ok {
+ /*line enum_ctors.mygo:511:11*/				var __mygo_expr_7 Result[Option[goast.Expr], string]
+ /*line enum_ctors.mygo:511:14*/				if qualifiedEnumMatches(expr.Type, __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_2.F1, variant) {
+ /*line enum_ctors.mygo:512:13*/					var __mygo_expr_6 Result[Option[goast.Expr], string]
+ /*line enum_ctors.mygo:512:16*/					if isCanonicalAlias(__mygo_match___mygo_expr_5.F0) {
+ /*line enum_ctors.mygo:512:13*/						__mygo_expr_6 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(__mygo_match___mygo_expr_5.F0 + "." + __mygo_match___mygo_expr_2.F1 + "__" + variant + enumTypeArgsText(expr.Type) + "()")))
+ /*line zz_enum_ctors.gen.go:431:1*/					} else {
+ /*line enum_ctors.mygo:512:13*/						__mygo_expr_6 = Ok[Option[goast.Expr], string](Some[goast.Expr](goast.MustExpr(__mygo_match___mygo_expr_5.F0 + "." + __mygo_match___mygo_expr_2.F1 + "__" + variant + "__Ctor" + enumTypeArgsText(expr.Type) + "()")))
+ /*line zz_enum_ctors.gen.go:433:1*/					}
+ /*line enum_ctors.mygo:511:11*/					__mygo_expr_7 = __mygo_expr_6
 				} else {
-					__mygo_expr_4 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_enum_ctors.gen.go:358:1*/				}
- /*line enum_ctors.mygo:479:7*/				__mygo_expr_7 = __mygo_expr_4
+					__mygo_expr_7 = Ok[Option[goast.Expr], string](None[goast.Expr]())
+ /*line zz_enum_ctors.gen.go:437:1*/				}
+ /*line enum_ctors.mygo:509:7*/				__mygo_expr_4 = __mygo_expr_7
 			} else {
-				__mygo_expr_7 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_enum_ctors.gen.go:362:1*/			}
- /*line enum_ctors.mygo:464:3*/			__mygo_expr_1 = __mygo_expr_7
+				__mygo_expr_4 = Ok[Option[goast.Expr], string](None[goast.Expr]())
+ /*line zz_enum_ctors.gen.go:441:1*/			}
+ /*line enum_ctors.mygo:494:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
 			__mygo_expr_1 = Ok[Option[goast.Expr], string](None[goast.Expr]())
- /*line zz_enum_ctors.gen.go:366:1*/		}
+ /*line zz_enum_ctors.gen.go:445:1*/		}
 	}
- /*line enum_ctors.mygo:464:3*/	return __mygo_expr_1
- /*line zz_enum_ctors.gen.go:369:1*/}
+ /*line enum_ctors.mygo:494:3*/	return __mygo_expr_1
+ /*line zz_enum_ctors.gen.go:448:1*/}
 func __mygo_mt_codegen3_enumCtorArgs(__mygo_mt_p0 ir3.ShapeVariant, __mygo_mt_p1 []string, __mygo_mt_p2 string, __mygo_mt_p3 bool, __mygo_mt_p4 int, __mygo_mt_p5 string, __mygo_state int) string {
 	for {
 		switch __mygo_state {
@@ -387,7 +466,7 @@ func __mygo_mt_codegen3_enumCtorArgs(__mygo_mt_p0 ir3.ShapeVariant, __mygo_mt_p1
 						__mygo_expr_1 = value
 					} else {
 						__mygo_expr_1 = __mygo_mt_p5 + ", " + value
- /*line zz_enum_ctors.gen.go:390:1*/					}
+ /*line zz_enum_ctors.gen.go:469:1*/					}
  /*line enum_ctors.mygo:295:9*/					__tail_5 := __mygo_expr_1
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3, __mygo_mt_p4, __mygo_mt_p5 = __tail_0, __tail_1, __tail_2, __tail_3, __tail_4, __tail_5
 					__mygo_state = 0
@@ -405,7 +484,7 @@ func __mygo_mt_codegen3_enumCtorArgs(__mygo_mt_p0 ir3.ShapeVariant, __mygo_mt_p1
 						continue
  /*line enum_ctors.mygo:290:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_enum_ctors.gen.go:408:1*/					}
+ /*line zz_enum_ctors.gen.go:487:1*/					}
 				}
 			}
 		default:
@@ -419,7 +498,7 @@ func __mygo_mt_codegen3_enumCtorDeclsAt(__mygo_mt_p0 string, __mygo_mt_p1 []stri
 		case 0:
  /*line enum_ctors.mygo:37:6*/			if __mygo_mt_p6 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p2) {
  /*line enum_ctors.mygo:38:5*/				return __mygo_mt_p7
- /*line zz_enum_ctors.gen.go:422:1*/			} else {
+ /*line zz_enum_ctors.gen.go:501:1*/			} else {
  /*line enum_ctors.mygo:40:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p2, __mygo_mt_p6)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ShapeVariant]); ok {
  /*line enum_ctors.mygo:42:9*/					__tail_0 := __mygo_mt_p0
@@ -448,7 +527,7 @@ func __mygo_mt_codegen3_enumCtorDeclsAt(__mygo_mt_p0 string, __mygo_mt_p1 []stri
 						continue
  /*line enum_ctors.mygo:40:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_enum_ctors.gen.go:451:1*/					}
+ /*line zz_enum_ctors.gen.go:530:1*/					}
 				}
 			}
 		default:
@@ -469,7 +548,7 @@ func __mygo_mt_codegen3_enumCtorParamNames(__mygo_mt_p0 ir3.ShapeVariant, __mygo
 				__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 				__mygo_state = 0
 				continue
- /*line zz_enum_ctors.gen.go:472:1*/			}
+ /*line zz_enum_ctors.gen.go:551:1*/			}
 		default:
 			panic("mygo: invalid mutual-tailcall state")
 		}
@@ -481,7 +560,7 @@ func __mygo_mt_codegen3_enumCtorParamTypes(__mygo_mt_p0 ir3.ShapeVariant, __mygo
 		case 0:
  /*line enum_ctors.mygo:207:6*/			if __mygo_mt_p4 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0.Fields) {
  /*line enum_ctors.mygo:208:5*/				return __mygo_mt_p5
- /*line zz_enum_ctors.gen.go:484:1*/			} else {
+ /*line zz_enum_ctors.gen.go:563:1*/			} else {
  /*line enum_ctors.mygo:210:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0.Fields, __mygo_mt_p4)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
  /*line enum_ctors.mygo:212:9*/					__tail_0 := __mygo_mt_p0
@@ -506,7 +585,7 @@ func __mygo_mt_codegen3_enumCtorParamTypes(__mygo_mt_p0 ir3.ShapeVariant, __mygo
 						continue
  /*line enum_ctors.mygo:210:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_enum_ctors.gen.go:509:1*/					}
+ /*line zz_enum_ctors.gen.go:588:1*/					}
 				}
 			}
 		default:
@@ -518,34 +597,76 @@ func __mygo_mt_codegen3_goAppliedArgsText(__mygo_mt_p0 []ast2.MonoType, __mygo_m
 	for {
 		switch __mygo_state {
 		case 0:
- /*line enum_ctors.mygo:418:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line enum_ctors.mygo:419:5*/				return __mygo_mt_p2
- /*line zz_enum_ctors.gen.go:523:1*/			} else {
- /*line enum_ctors.mygo:421:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line enum_ctors.mygo:448:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line enum_ctors.mygo:449:5*/				return __mygo_mt_p2
+ /*line zz_enum_ctors.gen.go:602:1*/			} else {
+ /*line enum_ctors.mygo:451:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.MonoType]); ok {
- /*line enum_ctors.mygo:423:9*/					__tail_0 := __mygo_mt_p0
+ /*line enum_ctors.mygo:453:9*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
- /*line enum_ctors.mygo:426:11*/					var __mygo_expr_2 string
- /*line enum_ctors.mygo:426:14*/					if __mygo_mt_p1 == 0 {
- /*line enum_ctors.mygo:426:11*/						__mygo_expr_2 = ir3.GoTypeString(__mygo_match___mygo_expr_1.F0, []string{})
- /*line zz_enum_ctors.gen.go:531:1*/					} else {
- /*line enum_ctors.mygo:426:11*/						__mygo_expr_2 = __mygo_mt_p2 + ", " + ir3.GoTypeString(__mygo_match___mygo_expr_1.F0, []string{})
- /*line zz_enum_ctors.gen.go:533:1*/					}
- /*line enum_ctors.mygo:423:9*/					__tail_2 := __mygo_expr_2
+ /*line enum_ctors.mygo:456:11*/					var __mygo_expr_2 string
+ /*line enum_ctors.mygo:456:14*/					if __mygo_mt_p1 == 0 {
+ /*line enum_ctors.mygo:456:11*/						__mygo_expr_2 = ir3.GoTypeString(__mygo_match___mygo_expr_1.F0, []string{})
+ /*line zz_enum_ctors.gen.go:610:1*/					} else {
+ /*line enum_ctors.mygo:456:11*/						__mygo_expr_2 = __mygo_mt_p2 + ", " + ir3.GoTypeString(__mygo_match___mygo_expr_1.F0, []string{})
+ /*line zz_enum_ctors.gen.go:612:1*/					}
+ /*line enum_ctors.mygo:453:9*/					__tail_2 := __mygo_expr_2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
- /*line enum_ctors.mygo:421:5*/				} else {
+ /*line enum_ctors.mygo:451:5*/				} else {
 					if _, ok := __mygo_expr_0.(Option__None[ast2.MonoType]); ok {
- /*line enum_ctors.mygo:433:20*/						__tail_0 := __mygo_mt_p0
+ /*line enum_ctors.mygo:463:20*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := __mygo_mt_p2
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line enum_ctors.mygo:421:5*/					} else {
+ /*line enum_ctors.mygo:451:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_enum_ctors.gen.go:548:1*/					}
+ /*line zz_enum_ctors.gen.go:627:1*/					}
+				}
+			}
+		default:
+			panic("mygo: invalid mutual-tailcall state")
+		}
+	}
+}
+func __mygo_mt_codegen3_importedEnumHasVariant(__mygo_mt_p0 string, __mygo_mt_p1 string, __mygo_mt_p2 string, __mygo_mt_p3 int, __mygo_state int) bool {
+	for {
+		switch __mygo_state {
+		case 0:
+ /*line enum_ctors.mygo:390:6*/			if __mygo_mt_p3 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(activeFileImports) {
+ /*line enum_ctors.mygo:391:5*/				return false
+ /*line zz_enum_ctors.gen.go:641:1*/			} else {
+ /*line enum_ctors.mygo:393:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(activeFileImports, __mygo_mt_p3)
+				if _, ok := __mygo_expr_0.(Option__None[ir3.ImportSpec]); ok {
+ /*line enum_ctors.mygo:394:20*/					return false
+ /*line zz_enum_ctors.gen.go:645:1*/				} else {
+ /*line enum_ctors.mygo:393:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ir3.ImportSpec]); ok {
+ /*line enum_ctors.mygo:396:13*/						if !isGoImport(__mygo_match___mygo_expr_1.F0.Path) && effectiveImportAlias(__mygo_match___mygo_expr_1.F0) == __mygo_mt_p0 {
+ /*line enum_ctors.mygo:397:11*/							__mygo_expr_2 := MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(activeEnumTagLayouts, ir3.EnumTagLayoutKey(__mygo_match___mygo_expr_1.F0.Path, __mygo_mt_p1))
+							if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[ir3.EnumTagLayout]); ok {
+ /*line enum_ctors.mygo:398:34*/								return MygoIN6OptionM6IsSome[int](MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(__mygo_match___mygo_expr_3.F0.VariantIDs, __mygo_mt_p2))
+ /*line enum_ctors.mygo:397:11*/							} else {
+								if _, ok := __mygo_expr_2.(Option__None[ir3.EnumTagLayout]); ok {
+ /*line enum_ctors.mygo:399:26*/									return false
+ /*line enum_ctors.mygo:397:11*/								} else {
+									panic("non-exhaustive switch")
+ /*line zz_enum_ctors.gen.go:656:1*/								}
+							}
+ /*line enum_ctors.mygo:396:9*/						} else {
+ /*line enum_ctors.mygo:402:11*/							__tail_0 := __mygo_mt_p0
+							__tail_1 := __mygo_mt_p1
+							__tail_2 := __mygo_mt_p2
+							__tail_3 := __mygo_mt_p3 + 1
+							__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2, __mygo_mt_p3 = __tail_0, __tail_1, __tail_2, __tail_3
+							__mygo_state = 0
+							continue
+ /*line zz_enum_ctors.gen.go:666:1*/						}
+ /*line enum_ctors.mygo:393:5*/					} else {
+						panic("non-exhaustive switch")
+ /*line zz_enum_ctors.gen.go:669:1*/					}
 				}
 			}
 		default:
@@ -559,7 +680,7 @@ func __mygo_mt_codegen3_joinNames(__mygo_mt_p0 []string, __mygo_mt_p1 int, __myg
 		case 0:
  /*line enum_ctors.mygo:171:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
  /*line enum_ctors.mygo:172:5*/				return __mygo_mt_p2
- /*line zz_enum_ctors.gen.go:562:1*/			} else {
+ /*line zz_enum_ctors.gen.go:683:1*/			} else {
  /*line enum_ctors.mygo:174:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[string]); ok {
  /*line enum_ctors.mygo:176:9*/					__tail_0 := __mygo_mt_p0
@@ -567,9 +688,9 @@ func __mygo_mt_codegen3_joinNames(__mygo_mt_p0 []string, __mygo_mt_p1 int, __myg
  /*line enum_ctors.mygo:179:11*/					var __mygo_expr_2 string
  /*line enum_ctors.mygo:179:14*/					if __mygo_mt_p1 == 0 {
  /*line enum_ctors.mygo:179:11*/						__mygo_expr_2 = __mygo_match___mygo_expr_1.F0
- /*line zz_enum_ctors.gen.go:570:1*/					} else {
+ /*line zz_enum_ctors.gen.go:691:1*/					} else {
  /*line enum_ctors.mygo:179:11*/						__mygo_expr_2 = __mygo_mt_p2 + ", " + __mygo_match___mygo_expr_1.F0
- /*line zz_enum_ctors.gen.go:572:1*/					}
+ /*line zz_enum_ctors.gen.go:693:1*/					}
  /*line enum_ctors.mygo:176:9*/					__tail_2 := __mygo_expr_2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
@@ -584,7 +705,7 @@ func __mygo_mt_codegen3_joinNames(__mygo_mt_p0 []string, __mygo_mt_p1 int, __myg
 						continue
  /*line enum_ctors.mygo:174:5*/					} else {
 						panic("non-exhaustive switch")
- /*line zz_enum_ctors.gen.go:587:1*/					}
+ /*line zz_enum_ctors.gen.go:708:1*/					}
 				}
 			}
 		default:

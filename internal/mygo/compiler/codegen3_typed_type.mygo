@@ -1,0 +1,290 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+
+# Backend-independent representation of an inferred monotype. Child order is
+# constructor then arguments for applications, and result then parameters for
+# functions. The complete dependency summary has its own version and validity
+# checks; a decoded type alone does not make a cache entry complete.
+struct Codegen3CachedType
+  Kind: String `json:"kind"`
+  Name: String `json:"name,omitempty"`
+  Number: Int `json:"number,omitempty"`
+  Children: Slice[Codegen3CachedType] `json:"children,omitempty"`
+end
+
+struct Codegen3CachedPredicate
+  ClassName: String `json:"class"`
+  Args: Slice[Codegen3CachedType] `json:"args,omitempty"`
+  Origin: Slice[ast2.SourceSpan] `json:"origin,omitempty"`
+  Definition: Slice[ast2.SourceSpan] `json:"definition,omitempty"`
+end
+
+struct Codegen3CachedScheme
+  Bound: Slice[Int] `json:"bound,omitempty"`
+  Predicates: Slice[Codegen3CachedPredicate] `json:"predicates,omitempty"`
+  Body: Codegen3CachedType `json:"body"`
+end
+
+struct Codegen3CachedEnvEntry
+  Name: String `json:"name"`
+  Scheme: Codegen3CachedScheme `json:"scheme"`
+end
+
+struct Codegen3CachedFieldEntry
+  TypeName: String `json:"typeName"`
+  FieldName: String `json:"fieldName"`
+  Type: Codegen3CachedType `json:"type"`
+end
+
+struct Codegen3CachedInstance
+  ClassName: String `json:"class"`
+  Type: Codegen3CachedType `json:"type"`
+  Predicates: Slice[Codegen3CachedPredicate] `json:"predicates,omitempty"`
+end
+
+func codegen3EncodeFieldEntry(entry: typeinference2.FieldEntry) -> Codegen3CachedFieldEntry
+  Codegen3CachedFieldEntry {
+    TypeName: entry.TypeName,
+    FieldName: entry.FieldName,
+    Type: codegen3EncodeMonoType(entry.Type),
+  }
+end
+
+func codegen3DecodeFieldEntry(entry: Codegen3CachedFieldEntry) -> Option[typeinference2.FieldEntry]
+  if entry.TypeName == "" || entry.FieldName == "" then
+    None
+  else
+    codegen3DecodeMonoType(entry.Type).Map(func(typ: ast2.MonoType) -> typeinference2.FieldEntry
+      typeinference2.FieldEntry { TypeName: entry.TypeName, FieldName: entry.FieldName, Type: typ }
+    end)
+  end
+end
+
+func codegen3EncodeInstance(instance: typeinference2.Instance) -> Codegen3CachedInstance
+  Codegen3CachedInstance {
+    ClassName: instance.ClassName,
+    Type: codegen3EncodeMonoType(instance.Type),
+    Predicates: instance.Predicates.Map(codegen3EncodePredicate),
+  }
+end
+
+func codegen3DecodeInstance(instance: Codegen3CachedInstance) -> Option[typeinference2.Instance]
+  if instance.ClassName == "" then
+    None
+  else
+    switch codegen3DecodeMonoType(instance.Type)
+      case None => None
+      case Some(typ) then
+        codegen3DecodePredicates(instance.Predicates, 0, []).Map(func(predicates: Slice[typeinference2.Predicate]) -> typeinference2.Instance
+          typeinference2.Instance { ClassName: instance.ClassName, Type: typ, Predicates: predicates }
+        end)
+      end
+    end
+  end
+end
+
+func codegen3EncodeEnvEntry(entry: typeinference2.EnvEntry) -> Codegen3CachedEnvEntry
+  Codegen3CachedEnvEntry { Name: entry.Name, Scheme: codegen3EncodeScheme(entry.Scheme) }
+end
+
+func codegen3DecodeEnvEntry(entry: Codegen3CachedEnvEntry) -> Option[typeinference2.EnvEntry]
+  if entry.Name == "" then
+    None
+  else
+    codegen3DecodeScheme(entry.Scheme).Map(func(scheme: typeinference2.Scheme) -> typeinference2.EnvEntry
+      typeinference2.EnvEntry { Name: entry.Name, Scheme: scheme }
+    end)
+  end
+end
+
+func codegen3EncodeSpan(span: Option[ast2.SourceSpan]) -> Slice[ast2.SourceSpan]
+  switch span
+    case None => []
+    case Some(value) => [value]
+  end
+end
+
+func codegen3EncodePredicate(predicate: typeinference2.Predicate) -> Codegen3CachedPredicate
+  Codegen3CachedPredicate {
+    ClassName: predicate.ClassName,
+    Args: predicate.Args.Map(codegen3EncodeMonoType),
+    Origin: codegen3EncodeSpan(predicate.Origin),
+    Definition: codegen3EncodeSpan(predicate.Definition),
+  }
+end
+
+func codegen3EncodeScheme(scheme: typeinference2.Scheme) -> Codegen3CachedScheme
+  Codegen3CachedScheme {
+    Bound: scheme.Bound,
+    Predicates: scheme.Predicates.Map(codegen3EncodePredicate),
+    Body: codegen3EncodeMonoType(scheme.Body),
+  }
+end
+
+func codegen3DecodePredicates(items: Slice[Codegen3CachedPredicate], index: Int, out: Slice[typeinference2.Predicate]) -> Option[Slice[typeinference2.Predicate]]
+  if index >= items.Len() then
+    Some(out)
+  else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        if item.ClassName == "" || item.Origin.Len() > 1 || item.Definition.Len() > 1 then
+          None
+        else
+          switch codegen3DecodeMonoTypes(item.Args, 0, [])
+            case None => None
+            case Some(args) => codegen3DecodePredicates(items, index + 1, out.Append(typeinference2.Predicate {
+              ClassName: item.ClassName,
+              Args: args,
+              Origin: item.Origin.Get(0),
+              Definition: item.Definition.Get(0),
+            }))
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeScheme(value: Codegen3CachedScheme) -> Option[typeinference2.Scheme]
+  switch codegen3DecodeMonoType(value.Body)
+    case None => None
+    case Some(body) then
+      codegen3DecodePredicates(value.Predicates, 0, []).Map(func(predicates: Slice[typeinference2.Predicate]) -> typeinference2.Scheme
+        typeinference2.Scheme { Bound: value.Bound, Predicates: predicates, Body: body }
+      end)
+    end
+  end
+end
+
+func codegen3CachedType(kind: String, name: String, number: Int, children: Slice[Codegen3CachedType]) -> Codegen3CachedType
+  Codegen3CachedType { Kind: kind, Name: name, Number: number, Children: children }
+end
+
+func codegen3EncodeMonoType(typ: ast2.MonoType) -> Codegen3CachedType
+  switch typ
+    case TArray(element, length) => codegen3CachedType("array", "", length, [codegen3EncodeMonoType(element.value())])
+    case TVar(id) => codegen3CachedType("var", "", id, [])
+    case TKVar(id) => codegen3CachedType("kind-var", "", id, [])
+    case TParam(id) => codegen3CachedType("param", "", id, [])
+    case TCon(name) => codegen3CachedType("constructor", name, 0, [])
+    case TUnit => codegen3CachedType("unit", "", 0, [])
+    case TQualifiedName(path, inner) => codegen3CachedType("qualified", path, 0, [codegen3EncodeMonoType(inner.value())])
+    case TTuple(items) => codegen3CachedType("tuple", "", 0, items.Map(codegen3EncodeMonoType))
+    case TApp(ctor, args) => codegen3CachedType("application", "", 0, [codegen3EncodeMonoType(ctor.value())].Concat(args.Map(codegen3EncodeMonoType)))
+    case TFunc(args, ret) => codegen3CachedType("function", "", 0, [codegen3EncodeMonoType(ret.value())].Concat(args.Map(codegen3EncodeMonoType)))
+    case TVariadic(args, ret) => codegen3CachedType("variadic", "", 0, [codegen3EncodeMonoType(ret.value())].Concat(args.Map(codegen3EncodeMonoType)))
+  end
+end
+
+func codegen3DecodeMonoTypes(items: Slice[Codegen3CachedType], index: Int, out: Slice[ast2.MonoType]) -> Option[Slice[ast2.MonoType]]
+  if index >= items.Len() then
+    Some(out)
+  else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        switch codegen3DecodeMonoType(item)
+          case None => None
+          case Some(typ) => codegen3DecodeMonoTypes(items, index + 1, out.Append(typ))
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeMonoType(value: Codegen3CachedType) -> Option[ast2.MonoType]
+  switch value.Kind
+    case "var" => if value.Children.Len() == 0 => Some(ast2.MonoType.TVar(value.Number)) else None
+    case "kind-var" => if value.Children.Len() == 0 => Some(ast2.MonoType.TKVar(value.Number)) else None
+    case "param" => if value.Children.Len() == 0 => Some(ast2.MonoType.TParam(value.Number)) else None
+    case "constructor" => if value.Children.Len() == 0 && value.Name != "" => Some(ast2.MonoType.TCon(value.Name)) else None
+    case "unit" => if value.Children.Len() == 0 => Some(ast2.MonoType.TUnit) else None
+    case "tuple" => codegen3DecodeMonoTypes(value.Children, 0, []).Map(func(items: Slice[ast2.MonoType]) -> ast2.MonoType ast2.MonoType.TTuple(items) end)
+    case _ => codegen3DecodeCompoundMonoType(value)
+  end
+end
+
+func codegen3DecodeCompoundMonoType(value: Codegen3CachedType) -> Option[ast2.MonoType]
+  switch value.Children.Get(0)
+    case None => None
+    case Some(first) then
+      switch codegen3DecodeMonoType(first)
+        case None => None
+        case Some(head) then
+          switch value.Kind
+            case "array" => if value.Children.Len() == 1 && value.Number >= 0 => Some(ast2.MonoType.TArray(Ref.new(head), value.Number)) else None
+            case "qualified" => if value.Children.Len() == 1 && value.Name != "" => Some(ast2.MonoType.TQualifiedName(value.Name, Ref.new(head))) else None
+            case "application" => codegen3DecodeMonoTypes(value.Children, 1, []).Map(func(items: Slice[ast2.MonoType]) -> ast2.MonoType ast2.MonoType.TApp(Ref.new(head), items) end)
+            case "function" => codegen3DecodeMonoTypes(value.Children, 1, []).Map(func(items: Slice[ast2.MonoType]) -> ast2.MonoType ast2.MonoType.TFunc(items, Ref.new(head)) end)
+            case "variadic" => codegen3DecodeMonoTypes(value.Children, 1, []).Map(func(items: Slice[ast2.MonoType]) -> ast2.MonoType ast2.MonoType.TVariadic(items, Ref.new(head)) end)
+            case _ => None
+          end
+        end
+      end
+    end
+  end
+end
+
+# Source-level types retain names and inline Go annotations needed by imported
+# declarations. They use separate tags from inferred monotypes.
+func codegen3EncodeTypeExpr(typ: ast2.TypeExpr) -> Codegen3CachedType
+  switch typ
+    case ArrayType(element, length) => codegen3CachedType("syntax-array", "", length, [codegen3EncodeTypeExpr(element.value())])
+    case NamedType(name, args) => codegen3CachedType("syntax-named", name, 0, args.Map(codegen3EncodeTypeExpr))
+    case FuncType(params, ret) => codegen3CachedType("syntax-function", "", 0, [codegen3EncodeTypeExpr(ret.value())].Concat(params.Map(codegen3EncodeTypeExpr)))
+    case TupleType(items) => codegen3CachedType("syntax-tuple", "", 0, items.Map(codegen3EncodeTypeExpr))
+    case UnitType => codegen3CachedType("syntax-unit", "", 0, [])
+    case InlineGo(inner, code) => codegen3CachedType("syntax-inline-go", code, 0, [codegen3EncodeTypeExpr(inner.value())])
+  end
+end
+
+func codegen3DecodeTypeExprs(items: Slice[Codegen3CachedType], index: Int, out: Slice[ast2.TypeExpr]) -> Option[Slice[ast2.TypeExpr]]
+  if index >= items.Len() then
+    Some(out)
+  else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        switch codegen3DecodeTypeExpr(item)
+          case None => None
+          case Some(typ) => codegen3DecodeTypeExprs(items, index + 1, out.Append(typ))
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeTypeExpr(value: Codegen3CachedType) -> Option[ast2.TypeExpr]
+  switch value.Kind
+    case "syntax-unit" => if value.Children.Len() == 0 => Some(ast2.TypeExpr.UnitType) else None
+    case "syntax-named" then
+      if value.Name == "" then None else
+        codegen3DecodeTypeExprs(value.Children, 0, []).Map(func(args: Slice[ast2.TypeExpr]) -> ast2.TypeExpr ast2.TypeExpr.NamedType(value.Name, args) end)
+      end
+    end
+    case "syntax-tuple" => codegen3DecodeTypeExprs(value.Children, 0, []).Map(func(items: Slice[ast2.TypeExpr]) -> ast2.TypeExpr ast2.TypeExpr.TupleType(items) end)
+    case _ => codegen3DecodeCompoundTypeExpr(value)
+  end
+end
+
+func codegen3DecodeCompoundTypeExpr(value: Codegen3CachedType) -> Option[ast2.TypeExpr]
+  switch value.Children.Get(0)
+    case None => None
+    case Some(first) then
+      switch codegen3DecodeTypeExpr(first)
+        case None => None
+        case Some(head) then
+          switch value.Kind
+            case "syntax-array" => if value.Children.Len() == 1 && value.Number >= 0 => Some(ast2.TypeExpr.ArrayType(Ref.new(head), value.Number)) else None
+            case "syntax-inline-go" => if value.Children.Len() == 1 => Some(ast2.TypeExpr.InlineGo(Ref.new(head), value.Name)) else None
+            case "syntax-function" => codegen3DecodeTypeExprs(value.Children, 1, []).Map(func(params: Slice[ast2.TypeExpr]) -> ast2.TypeExpr ast2.TypeExpr.FuncType(params, Ref.new(head)) end)
+            case _ => None
+          end
+        end
+      end
+    end
+  end
+end

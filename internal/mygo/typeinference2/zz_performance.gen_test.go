@@ -209,7 +209,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 			}{F0: PrimitiveGoSpelling(goName), F1: PrimitiveGoSpelling(myGoName)}
  /*line performance_test.mygo:152:9*/			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.F0.(Option__Some[string]); ok {
 				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.F1.(Option__Some[string]); ok {
- /*line performance_test.mygo:444:7*/					if __mygo_match___mygo_expr_4.F0 != goName || __mygo_match___mygo_expr_5.F0 != goName {
+ /*line performance_test.mygo:446:7*/					if __mygo_match___mygo_expr_4.F0 != goName || __mygo_match___mygo_expr_5.F0 != goName {
  /*line performance_test.mygo:155:15*/						t.Fatalf("PrimitiveGoSpelling(%s/%s) = %s/%s, want %s", goName, myGoName, __mygo_match___mygo_expr_4.F0, __mygo_match___mygo_expr_5.F0, goName)
  /*line performance_test.mygo:152:9*/					} else {
  /*line zz_performance.gen_test.go:215:1*/					}
@@ -221,7 +221,7 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line zz_performance.gen_test.go:221:1*/			}
  /*line performance_test.mygo:160:9*/			__mygo_expr_6 := PrimitiveMyGoSpelling(goName)
 			if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[string]); ok {
- /*line performance_test.mygo:288:15*/				if __mygo_match___mygo_expr_7.F0 != myGoName {
+ /*line performance_test.mygo:289:15*/				if __mygo_match___mygo_expr_7.F0 != myGoName {
  /*line performance_test.mygo:163:15*/					t.Fatalf("PrimitiveMyGoSpelling(%s) = %s, want %s", goName, __mygo_match___mygo_expr_7.F0, myGoName)
  /*line performance_test.mygo:160:9*/				} else {
  /*line zz_performance.gen_test.go:227:1*/				}
@@ -309,26 +309,26 @@ import . "github.com/mygo-lang/mygo/prelude"
  /*line performance_test.mygo:266:26*/				t.Fatalf("parse MyGO import: %v", __mygo_match___mygo_expr_11.F0)
  /*line zz_performance.gen_test.go:310:1*/			} else {
  /*line performance_test.mygo:246:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[ast2.File, string]); ok {
- /*line performance_test.mygo:268:11*/					__mygo_expr_4 := buildSourceImportOverlay(__mygo_match___mygo_expr_1.F0.Decls, []GoPackageEntry{goPkg}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "mp", Path: "example.com/mp", Decls: __mygo_match___mygo_expr_3.F0.Decls, DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_3.F0.Decls)}})
+ /*line performance_test.mygo:268:11*/					__mygo_expr_4 := buildSourceImportOverlay(__mygo_match___mygo_expr_1.F0.Decls, []GoPackageEntry{goPkg}, []MyGoPackageInfo{MyGoPackageInfo{Alias: "mp", Path: "example.com/mp", Decls: __mygo_match___mygo_expr_3.F0.Decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_3.F0.Decls)}})
 					if __mygo_match___mygo_expr_10, ok := __mygo_expr_4.(Result__Err[SourceImportOverlay, ast2.Diagnostic]); ok {
- /*line performance_test.mygo:280:30*/						t.Fatalf("build overlay: %v", __mygo_match___mygo_expr_10.F0)
+ /*line performance_test.mygo:281:30*/						t.Fatalf("build overlay: %v", __mygo_match___mygo_expr_10.F0)
  /*line zz_performance.gen_test.go:315:1*/					} else {
  /*line performance_test.mygo:268:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[SourceImportOverlay, ast2.Diagnostic]); ok {
 							imported := applySourceImportOverlay(initialEnv(), __mygo_match___mygo_expr_5.F0)
 							withLocal := envPut(imported, "Value", Scheme{Bound: []int{}, Predicates: []Predicate{}, Body: ast2.MonoType__TCon__Ctor("Int")})
- /*line performance_test.mygo:288:15*/							__mygo_expr_6 := envGet(withLocal, "Value")
+ /*line performance_test.mygo:289:15*/							__mygo_expr_6 := envGet(withLocal, "Value")
 							if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[Scheme]); ok {
- /*line performance_test.mygo:290:23*/								if !schemeBodyEqual(__mygo_match___mygo_expr_7.F0, ast2.MonoType__TCon__Ctor("Int")) {
- /*line performance_test.mygo:291:21*/									t.Fatalf("local Value lost shadowing: %v", __mygo_match___mygo_expr_7.F0.Body)
- /*line performance_test.mygo:288:15*/								} else {
+ /*line performance_test.mygo:291:23*/								if !schemeBodyEqual(__mygo_match___mygo_expr_7.F0, ast2.MonoType__TCon__Ctor("Int")) {
+ /*line performance_test.mygo:292:21*/									t.Fatalf("local Value lost shadowing: %v", __mygo_match___mygo_expr_7.F0.Body)
+ /*line performance_test.mygo:289:15*/								} else {
  /*line zz_performance.gen_test.go:324:1*/								}
- /*line performance_test.mygo:288:15*/							} else {
+ /*line performance_test.mygo:289:15*/							} else {
 								if _, ok := __mygo_expr_6.(Option__None[Scheme]); ok {
 									t.Fatalf("%s", "local Value missing")
 								} else {
  /*line zz_performance.gen_test.go:329:1*/								}
 							}
- /*line performance_test.mygo:296:15*/							__mygo_expr_8 := envGet(imported, "gp.Value")
+ /*line performance_test.mygo:297:15*/							__mygo_expr_8 := envGet(imported, "gp.Value")
 							if _, ok := __mygo_expr_8.(Option__Some[Scheme]); ok {
 							} else {
 								if _, ok := __mygo_expr_8.(Option__None[Scheme]); ok {
@@ -355,235 +355,235 @@ import . "github.com/mygo-lang/mygo/prelude"
 	}
  /*line performance_test.mygo:246:3*/	return
  /*line zz_performance.gen_test.go:357:1*/}
- /*line performance_test.mygo:312:1*/func TestEditorCacheResetClearsSharedBatches(t *testing.T) {
- /*line performance_test.mygo:313:3*/	ResetEditorInferenceCache()
- /*line performance_test.mygo:312:1*/	pkg := GoPackageEntry{Alias: "p", Path: "go:example.com/resettest", Origin: None[ast2.SourceSpan](), GoName: "resettest", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Value", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
- /*line performance_test.mygo:329:3*/	__mygo_expr_0 := cachedGoPackageBatch(pkg)
+ /*line performance_test.mygo:313:1*/func TestEditorCacheResetClearsSharedBatches(t *testing.T) {
+ /*line performance_test.mygo:314:3*/	ResetEditorInferenceCache()
+ /*line performance_test.mygo:313:1*/	pkg := GoPackageEntry{Alias: "p", Path: "go:example.com/resettest", Origin: None[ast2.SourceSpan](), GoName: "resettest", Funcs: []GoFuncSignature{GoFuncSignature{Name: "Value", Params: []string{}, Results: []string{"int"}, Variadic: false, TypeParams: []string{}}}, Types: []GoTypeSignature{}, Constants: []GoConstSignature{}}
+ /*line performance_test.mygo:330:3*/	__mygo_expr_0 := cachedGoPackageBatch(pkg)
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[Option[BatchBindings], ast2.Diagnostic]); ok {
- /*line performance_test.mygo:330:22*/		t.Fatalf("seed Go batch: %v", __mygo_match___mygo_expr_1.F0)
- /*line performance_test.mygo:329:3*/	} else {
+ /*line performance_test.mygo:331:22*/		t.Fatalf("seed Go batch: %v", __mygo_match___mygo_expr_1.F0)
+ /*line performance_test.mygo:330:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[Option[BatchBindings], ast2.Diagnostic]); ok {
 		} else {
  /*line zz_performance.gen_test.go:367:1*/		}
 	}
- /*line performance_test.mygo:333:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache) == 0 {
- /*line performance_test.mygo:334:5*/		t.Fatalf("%s", "Go batch cache was not populated")
- /*line performance_test.mygo:333:3*/	} else {
+ /*line performance_test.mygo:334:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache) == 0 {
+ /*line performance_test.mygo:335:5*/		t.Fatalf("%s", "Go batch cache was not populated")
+ /*line performance_test.mygo:334:3*/	} else {
  /*line zz_performance.gen_test.go:372:1*/	}
- /*line performance_test.mygo:336:3*/	ResetEditorInferenceCache()
- /*line performance_test.mygo:337:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache) != 0 {
- /*line performance_test.mygo:338:5*/		t.Fatalf("Go batch cache survived reset: %d entries", MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache))
+ /*line performance_test.mygo:337:3*/	ResetEditorInferenceCache()
+ /*line performance_test.mygo:338:3*/	if MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache) != 0 {
+ /*line performance_test.mygo:339:5*/		t.Fatalf("Go batch cache survived reset: %d entries", MygoIT11IEnumerableFN14MapIEnumerableGN1KN1VEGN3MapGN1KN1VEN1VEM3Len(goPackageBatchCache))
 		return
- /*line performance_test.mygo:337:3*/	} else {
+ /*line performance_test.mygo:338:3*/	} else {
 		return
  /*line zz_performance.gen_test.go:379:1*/	}
 }
- /*line performance_test.mygo:342:1*/func TestImportedPackageBatchSharedAcrossImporters(t *testing.T) {
- /*line performance_test.mygo:343:3*/	ResetEditorInferenceCache()
- /*line performance_test.mygo:342:1*/	depSource := "package dep\n\nfunc Value() -> Int\n  1\nend\n"
- /*line performance_test.mygo:345:3*/	__mygo_expr_0 := parser2.ParseFileAt("dep.mygo", depSource)
+ /*line performance_test.mygo:343:1*/func TestImportedPackageBatchSharedAcrossImporters(t *testing.T) {
+ /*line performance_test.mygo:344:3*/	ResetEditorInferenceCache()
+ /*line performance_test.mygo:343:1*/	depSource := "package dep\n\nfunc Value() -> Int\n  1\nend\n"
+ /*line performance_test.mygo:346:3*/	__mygo_expr_0 := parser2.ParseFileAt("dep.mygo", depSource)
 	if __mygo_match___mygo_expr_12, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line performance_test.mygo:346:22*/		t.Fatalf("parse dep: %v", __mygo_match___mygo_expr_12.F0)
+ /*line performance_test.mygo:347:22*/		t.Fatalf("parse dep: %v", __mygo_match___mygo_expr_12.F0)
  /*line zz_performance.gen_test.go:387:1*/	} else {
- /*line performance_test.mygo:345:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
-			packages := []MyGoPackageInfo{MyGoPackageInfo{Alias: "dep", Path: "example.com/dep", Decls: __mygo_match___mygo_expr_1.F0.Decls, DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_1.F0.Decls)}}
+ /*line performance_test.mygo:346:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+			packages := []MyGoPackageInfo{MyGoPackageInfo{Alias: "dep", Path: "example.com/dep", Decls: __mygo_match___mygo_expr_1.F0.Decls, PretypedEnv: None[[]EnvEntry](), DynamicMetadataJSON: "", EnumIndex: None[map[string]EnumDeclIndexEntry](), ValueIndex: BuildValueDeclIndex(__mygo_match___mygo_expr_1.F0.Decls)}}
 			__mygo_expr_2 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(packages, 0)
 			if _, ok := __mygo_expr_2.(Option__None[MyGoPackageInfo]); ok {
 				t.Fatalf("%s", "dep package missing")
  /*line zz_performance.gen_test.go:393:1*/			} else {
- /*line performance_test.mygo:345:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MyGoPackageInfo]); ok {
- /*line performance_test.mygo:359:11*/					__mygo_expr_4 := cachedImportedPackage(__mygo_match___mygo_expr_3.F0, "dep", packages, []GoPackageEntry{})
+ /*line performance_test.mygo:346:3*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[MyGoPackageInfo]); ok {
+ /*line performance_test.mygo:361:11*/					__mygo_expr_4 := cachedImportedPackage(__mygo_match___mygo_expr_3.F0, "dep", packages, []GoPackageEntry{})
 					if __mygo_match___mygo_expr_11, ok := __mygo_expr_4.(Result__Err[ImportedPackageCacheEntry, string]); ok {
- /*line performance_test.mygo:360:30*/						t.Fatalf("first importer: %v", __mygo_match___mygo_expr_11.F0)
+ /*line performance_test.mygo:362:30*/						t.Fatalf("first importer: %v", __mygo_match___mygo_expr_11.F0)
  /*line zz_performance.gen_test.go:398:1*/					} else {
- /*line performance_test.mygo:359:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[ImportedPackageCacheEntry, string]); ok {
- /*line performance_test.mygo:362:15*/							__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.ExportedBatch
+ /*line performance_test.mygo:361:11*/						if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Ok[ImportedPackageCacheEntry, string]); ok {
+ /*line performance_test.mygo:364:15*/							__mygo_expr_6 := __mygo_match___mygo_expr_5.F0.ExportedBatch
 							if _, ok := __mygo_expr_6.(Option__None[BatchBindings]); ok {
 								t.Fatalf("%s", "first batch missing")
  /*line zz_performance.gen_test.go:403:1*/							} else {
- /*line performance_test.mygo:362:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[BatchBindings]); ok {
+ /*line performance_test.mygo:364:15*/								if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Option__Some[BatchBindings]); ok {
 									env1 := envPutBatchBindings(initialEnv(), __mygo_match___mygo_expr_7.F0)
 									env2 := envPutBatchBindings(initialEnv(), __mygo_match___mygo_expr_7.F0)
 									__mygo_expr_8 := struct {
- /*line performance_test.mygo:367:26*/										F0 Option[Scheme]
+ /*line performance_test.mygo:369:26*/										F0 Option[Scheme]
 										F1 Option[Scheme]
 									}{F0: envGet(env1, "dep.Value"), F1: envGet(env2, "dep.Value")}
- /*line performance_test.mygo:362:15*/									if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.F0.(Option__Some[Scheme]); ok {
+ /*line performance_test.mygo:364:15*/									if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.F0.(Option__Some[Scheme]); ok {
 										if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.F1.(Option__Some[Scheme]); ok {
- /*line performance_test.mygo:369:27*/											if !ast2.MonoEqual(__mygo_match___mygo_expr_9.F0.Body, __mygo_match___mygo_expr_10.F0.Body) {
- /*line performance_test.mygo:370:25*/												t.Fatalf("shared batch changed body: %v vs %v", __mygo_match___mygo_expr_9.F0.Body, __mygo_match___mygo_expr_10.F0.Body)
- /*line performance_test.mygo:362:15*/											} else {
+ /*line performance_test.mygo:371:27*/											if !ast2.MonoEqual(__mygo_match___mygo_expr_9.F0.Body, __mygo_match___mygo_expr_10.F0.Body) {
+ /*line performance_test.mygo:372:25*/												t.Fatalf("shared batch changed body: %v vs %v", __mygo_match___mygo_expr_9.F0.Body, __mygo_match___mygo_expr_10.F0.Body)
+ /*line performance_test.mygo:364:15*/											} else {
  /*line zz_performance.gen_test.go:416:1*/											}
- /*line performance_test.mygo:362:15*/										} else {
+ /*line performance_test.mygo:364:15*/										} else {
 											t.Fatalf("%s", "shared batch lost dep.Value")
  /*line zz_performance.gen_test.go:419:1*/										}
- /*line performance_test.mygo:362:15*/									} else {
+ /*line performance_test.mygo:364:15*/									} else {
 										t.Fatalf("%s", "shared batch lost dep.Value")
  /*line zz_performance.gen_test.go:422:1*/									}
- /*line performance_test.mygo:362:15*/								} else {
+ /*line performance_test.mygo:364:15*/								} else {
  /*line zz_performance.gen_test.go:424:1*/								}
 							}
- /*line performance_test.mygo:359:11*/						} else {
+ /*line performance_test.mygo:361:11*/						} else {
  /*line zz_performance.gen_test.go:427:1*/						}
 					}
- /*line performance_test.mygo:345:3*/				} else {
+ /*line performance_test.mygo:346:3*/				} else {
  /*line zz_performance.gen_test.go:430:1*/				}
 			}
- /*line performance_test.mygo:345:3*/		} else {
+ /*line performance_test.mygo:346:3*/		} else {
  /*line zz_performance.gen_test.go:433:1*/		}
 	}
- /*line performance_test.mygo:345:3*/	return
+ /*line performance_test.mygo:346:3*/	return
  /*line zz_performance.gen_test.go:436:1*/}
- /*line performance_test.mygo:385:1*/func parsePackageSourceForTest(t *testing.T, name string, source string) Option[PkgDeclSource] {
- /*line performance_test.mygo:386:3*/	__mygo_expr_0 := parser2.ParseFileAt(name, source)
+ /*line performance_test.mygo:387:1*/func parsePackageSourceForTest(t *testing.T, name string, source string) Option[PkgDeclSource] {
+ /*line performance_test.mygo:388:3*/	__mygo_expr_0 := parser2.ParseFileAt(name, source)
 	var __mygo_expr_1 Option[PkgDeclSource]
 	if __mygo_match___mygo_expr_6, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line performance_test.mygo:388:7*/		t.Fatalf("parse %s: %v", name, __mygo_match___mygo_expr_6.F0)
- /*line performance_test.mygo:386:3*/		__mygo_expr_1 = None[PkgDeclSource]()
+ /*line performance_test.mygo:390:7*/		t.Fatalf("parse %s: %v", name, __mygo_match___mygo_expr_6.F0)
+ /*line performance_test.mygo:388:3*/		__mygo_expr_1 = None[PkgDeclSource]()
  /*line zz_performance.gen_test.go:443:1*/	} else {
- /*line performance_test.mygo:386:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line performance_test.mygo:392:7*/			__mygo_expr_3 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
+ /*line performance_test.mygo:388:3*/		if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line performance_test.mygo:394:7*/			__mygo_expr_3 := ast2.AssignFileExprIDs(__mygo_match___mygo_expr_2.F0)
 			var __mygo_expr_4 Option[PkgDeclSource]
 			if _, ok := __mygo_expr_3.(Option__None[ast2.File]); ok {
- /*line performance_test.mygo:394:11*/				t.Fatalf("assign IDs for %s: None", name)
- /*line performance_test.mygo:392:7*/				__mygo_expr_4 = None[PkgDeclSource]()
+ /*line performance_test.mygo:396:11*/				t.Fatalf("assign IDs for %s: None", name)
+ /*line performance_test.mygo:394:7*/				__mygo_expr_4 = None[PkgDeclSource]()
  /*line zz_performance.gen_test.go:450:1*/			} else {
- /*line performance_test.mygo:392:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.File]); ok {
+ /*line performance_test.mygo:394:7*/				if __mygo_match___mygo_expr_5, ok := __mygo_expr_3.(Option__Some[ast2.File]); ok {
 					__mygo_expr_4 = Some[PkgDeclSource](PkgDeclSource{Path: __mygo_match___mygo_expr_5.F0.SourceName, PackageImportPath: "", Decls: __mygo_match___mygo_expr_5.F0.Decls, DeclPositions: __mygo_match___mygo_expr_5.F0.DeclPositions})
 				} else {
  /*line zz_performance.gen_test.go:454:1*/				}
 			}
- /*line performance_test.mygo:386:3*/			__mygo_expr_1 = __mygo_expr_4
+ /*line performance_test.mygo:388:3*/			__mygo_expr_1 = __mygo_expr_4
 		} else {
  /*line zz_performance.gen_test.go:458:1*/		}
 	}
- /*line performance_test.mygo:386:3*/	return __mygo_expr_1
+ /*line performance_test.mygo:388:3*/	return __mygo_expr_1
  /*line zz_performance.gen_test.go:461:1*/}
- /*line performance_test.mygo:410:1*/func TestPredeclareForwardAliasesAcrossFiles(t *testing.T) {
+ /*line performance_test.mygo:412:1*/func TestPredeclareForwardAliasesAcrossFiles(t *testing.T) {
 	first := MygoIN6OptionM6Unwrap[PkgDeclSource](parsePackageSourceForTest(t, "first.mygo", "package sample\n\ntype Alias = Later\n\nfunc first(value: Alias) -> Later\n  value\nend\n"))
 	second := MygoIN6OptionM6Unwrap[PkgDeclSource](parsePackageSourceForTest(t, "second.mygo", "package sample\n\nstruct Later\n  Value: Int\nend\n"))
 	third := MygoIN6OptionM6Unwrap[PkgDeclSource](parsePackageSourceForTest(t, "third.mygo", "package sample\n\nenum Holder\n  Item(Later)\nend\n"))
- /*line performance_test.mygo:426:3*/	__mygo_expr_0 := InferPackageWithGoPackages([]PkgDeclSource{first, second, third}, []GoPackageEntry{})
+ /*line performance_test.mygo:428:3*/	__mygo_expr_0 := InferPackageWithGoPackages([]PkgDeclSource{first, second, third}, []GoPackageEntry{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[PackageInfo, string]); ok {
- /*line performance_test.mygo:427:22*/		t.Fatalf("forward alias inference: %v", __mygo_match___mygo_expr_1.F0)
- /*line performance_test.mygo:426:3*/	} else {
+ /*line performance_test.mygo:429:22*/		t.Fatalf("forward alias inference: %v", __mygo_match___mygo_expr_1.F0)
+ /*line performance_test.mygo:428:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[PackageInfo, string]); ok {
 		} else {
  /*line zz_performance.gen_test.go:472:1*/		}
 	}
- /*line performance_test.mygo:426:3*/	return
+ /*line performance_test.mygo:428:3*/	return
  /*line zz_performance.gen_test.go:475:1*/}
- /*line performance_test.mygo:432:1*/func TestLongLocalBindingChain(t *testing.T) {
+ /*line performance_test.mygo:434:1*/func TestLongLocalBindingChain(t *testing.T) {
 	var parts []string = []string{"package sample\n\nfunc chain(a: Int) -> Int\n"}
 	index := 1
 	for index <= 300 {
 		parts = MygoIN5SliceM6Append(parts, "  let v"+MygoIT8ToStringFN3IntGN3IntEM8ToString(index)+" = a + "+MygoIT8ToStringFN3IntGN3IntEM8ToString(index)+"\n")
 		index = index + 1
  /*line zz_performance.gen_test.go:482:1*/	}
- /*line performance_test.mygo:432:1*/	parts = MygoIN5SliceM6Append(parts, "  v300\nend\n")
+ /*line performance_test.mygo:434:1*/	parts = MygoIN5SliceM6Append(parts, "  v300\nend\n")
 	source := strings.Join(parts, "")
- /*line performance_test.mygo:441:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line performance_test.mygo:443:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line performance_test.mygo:442:22*/		t.Fatalf("parse long binding chain: %v", __mygo_match___mygo_expr_5.F0)
+ /*line performance_test.mygo:444:22*/		t.Fatalf("parse long binding chain: %v", __mygo_match___mygo_expr_5.F0)
  /*line zz_performance.gen_test.go:488:1*/	} else {
- /*line performance_test.mygo:441:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line performance_test.mygo:444:7*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
+ /*line performance_test.mygo:443:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line performance_test.mygo:446:7*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line performance_test.mygo:445:26*/				t.Fatalf("infer long binding chain: %v", __mygo_match___mygo_expr_4.F0)
+ /*line performance_test.mygo:447:26*/				t.Fatalf("infer long binding chain: %v", __mygo_match___mygo_expr_4.F0)
  /*line zz_performance.gen_test.go:493:1*/			} else {
- /*line performance_test.mygo:444:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
- /*line performance_test.mygo:447:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.TypedDecls) == 0 {
- /*line performance_test.mygo:448:13*/						t.Fatalf("%s", "long binding chain produced no typed declarations")
- /*line performance_test.mygo:444:7*/					} else {
+ /*line performance_test.mygo:446:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
+ /*line performance_test.mygo:449:14*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_3.F0.TypedDecls) == 0 {
+ /*line performance_test.mygo:450:13*/						t.Fatalf("%s", "long binding chain produced no typed declarations")
+ /*line performance_test.mygo:446:7*/					} else {
  /*line zz_performance.gen_test.go:498:1*/					}
- /*line performance_test.mygo:444:7*/				} else {
+ /*line performance_test.mygo:446:7*/				} else {
  /*line zz_performance.gen_test.go:500:1*/				}
 			}
- /*line performance_test.mygo:441:3*/		} else {
+ /*line performance_test.mygo:443:3*/		} else {
  /*line zz_performance.gen_test.go:503:1*/		}
 	}
- /*line performance_test.mygo:441:3*/	return
+ /*line performance_test.mygo:443:3*/	return
  /*line zz_performance.gen_test.go:506:1*/}
- /*line performance_test.mygo:456:1*/func typedFuncNames(decls []ast2.Decl, index int, out []string) []string {
+ /*line performance_test.mygo:458:1*/func typedFuncNames(decls []ast2.Decl, index int, out []string) []string {
 	return __mygo_mt_typeinference2_typedFuncNames(decls, index, out, 0)
  /*line zz_performance.gen_test.go:509:1*/}
- /*line performance_test.mygo:473:1*/func TestTypedDeclarationOrder(t *testing.T) {
+ /*line performance_test.mygo:475:1*/func TestTypedDeclarationOrder(t *testing.T) {
 	source := "package sample\n\nfunc a() -> Int\n  1\nend\n\nfunc b() -> Int\n  2\nend\n\nfunc c() -> Int\n  3\nend\n"
- /*line performance_test.mygo:475:3*/	__mygo_expr_0 := parser2.ParseFile(source)
+ /*line performance_test.mygo:477:3*/	__mygo_expr_0 := parser2.ParseFile(source)
 	if __mygo_match___mygo_expr_9, ok := __mygo_expr_0.(Result__Err[ast2.File, string]); ok {
- /*line performance_test.mygo:476:22*/		t.Fatalf("parse order fixture: %v", __mygo_match___mygo_expr_9.F0)
+ /*line performance_test.mygo:478:22*/		t.Fatalf("parse order fixture: %v", __mygo_match___mygo_expr_9.F0)
  /*line zz_performance.gen_test.go:515:1*/	} else {
- /*line performance_test.mygo:475:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
- /*line performance_test.mygo:478:7*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
+ /*line performance_test.mygo:477:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[ast2.File, string]); ok {
+ /*line performance_test.mygo:480:7*/			__mygo_expr_2 := InferFile(__mygo_match___mygo_expr_1.F0)
 			if __mygo_match___mygo_expr_8, ok := __mygo_expr_2.(Result__Err[PackageInfo, string]); ok {
- /*line performance_test.mygo:479:26*/				t.Fatalf("infer order fixture: %v", __mygo_match___mygo_expr_8.F0)
+ /*line performance_test.mygo:481:26*/				t.Fatalf("infer order fixture: %v", __mygo_match___mygo_expr_8.F0)
  /*line zz_performance.gen_test.go:520:1*/			} else {
- /*line performance_test.mygo:478:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
+ /*line performance_test.mygo:480:7*/				if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Ok[PackageInfo, string]); ok {
 					names := typedFuncNames(__mygo_match___mygo_expr_3.F0.TypedDecls, 0, []string{})
- /*line performance_test.mygo:482:11*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) != 3 {
- /*line performance_test.mygo:483:13*/						t.Fatalf("typed funcs = %v, want a,b,c", names)
- /*line performance_test.mygo:482:11*/					} else {
+ /*line performance_test.mygo:484:11*/					if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(names) != 3 {
+ /*line performance_test.mygo:485:13*/						t.Fatalf("typed funcs = %v, want a,b,c", names)
+ /*line performance_test.mygo:484:11*/					} else {
  /*line zz_performance.gen_test.go:526:1*/					}
- /*line performance_test.mygo:478:7*/					__mygo_expr_4 := struct {
- /*line performance_test.mygo:485:18*/						F0 Option[string]
+ /*line performance_test.mygo:480:7*/					__mygo_expr_4 := struct {
+ /*line performance_test.mygo:487:18*/						F0 Option[string]
 						F1 Option[string]
 						F2 Option[string]
 					}{F0: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, 0), F1: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, 1), F2: MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(names, 2)}
- /*line performance_test.mygo:478:7*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.F0.(Option__Some[string]); ok {
+ /*line performance_test.mygo:480:7*/					if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.F0.(Option__Some[string]); ok {
 						if __mygo_match___mygo_expr_6, ok := __mygo_expr_4.F1.(Option__Some[string]); ok {
 							if __mygo_match___mygo_expr_7, ok := __mygo_expr_4.F2.(Option__Some[string]); ok {
- /*line performance_test.mygo:487:23*/								if __mygo_match___mygo_expr_5.F0 != "a" || __mygo_match___mygo_expr_6.F0 != "b" || __mygo_match___mygo_expr_7.F0 != "c" {
- /*line performance_test.mygo:488:17*/									t.Fatalf("typed func order = %s,%s,%s", __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_7.F0)
- /*line performance_test.mygo:478:7*/								} else {
+ /*line performance_test.mygo:489:23*/								if __mygo_match___mygo_expr_5.F0 != "a" || __mygo_match___mygo_expr_6.F0 != "b" || __mygo_match___mygo_expr_7.F0 != "c" {
+ /*line performance_test.mygo:490:17*/									t.Fatalf("typed func order = %s,%s,%s", __mygo_match___mygo_expr_5.F0, __mygo_match___mygo_expr_6.F0, __mygo_match___mygo_expr_7.F0)
+ /*line performance_test.mygo:480:7*/								} else {
  /*line zz_performance.gen_test.go:538:1*/								}
- /*line performance_test.mygo:478:7*/							} else {
+ /*line performance_test.mygo:480:7*/							} else {
 								t.Fatalf("typed func names missing: %v", names)
  /*line zz_performance.gen_test.go:541:1*/							}
- /*line performance_test.mygo:478:7*/						} else {
+ /*line performance_test.mygo:480:7*/						} else {
 							t.Fatalf("typed func names missing: %v", names)
  /*line zz_performance.gen_test.go:544:1*/						}
- /*line performance_test.mygo:478:7*/					} else {
+ /*line performance_test.mygo:480:7*/					} else {
 						t.Fatalf("typed func names missing: %v", names)
  /*line zz_performance.gen_test.go:547:1*/					}
- /*line performance_test.mygo:478:7*/				} else {
+ /*line performance_test.mygo:480:7*/				} else {
  /*line zz_performance.gen_test.go:549:1*/				}
 			}
- /*line performance_test.mygo:475:3*/		} else {
+ /*line performance_test.mygo:477:3*/		} else {
  /*line zz_performance.gen_test.go:552:1*/		}
 	}
- /*line performance_test.mygo:475:3*/	return
+ /*line performance_test.mygo:477:3*/	return
  /*line zz_performance.gen_test.go:555:1*/}
 func __mygo_mt_typeinference2_typedFuncNames(__mygo_mt_p0 []ast2.Decl, __mygo_mt_p1 int, __mygo_mt_p2 []string, __mygo_state int) []string {
 	for {
 		switch __mygo_state {
 		case 0:
- /*line performance_test.mygo:457:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
- /*line performance_test.mygo:458:5*/				return __mygo_mt_p2
+ /*line performance_test.mygo:459:6*/			if __mygo_mt_p1 >= MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_mt_p0) {
+ /*line performance_test.mygo:460:5*/				return __mygo_mt_p2
  /*line zz_performance.gen_test.go:562:1*/			} else {
- /*line performance_test.mygo:460:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
+ /*line performance_test.mygo:462:5*/				__mygo_expr_0 := MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_mt_p0, __mygo_mt_p1)
 				if _, ok := __mygo_expr_0.(Option__None[ast2.Decl]); ok {
- /*line performance_test.mygo:461:20*/					__tail_0 := __mygo_mt_p0
+ /*line performance_test.mygo:463:20*/					__tail_0 := __mygo_mt_p0
 					__tail_1 := __mygo_mt_p1 + 1
 					__tail_2 := __mygo_mt_p2
 					__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 					__mygo_state = 0
 					continue
  /*line zz_performance.gen_test.go:571:1*/				} else {
- /*line performance_test.mygo:460:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
- /*line performance_test.mygo:463:20*/						var __mygo_expr_2 []string
+ /*line performance_test.mygo:462:5*/					if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Option__Some[ast2.Decl]); ok {
+ /*line performance_test.mygo:465:20*/						var __mygo_expr_2 []string
 						if __mygo_match___mygo_expr_3, ok := __mygo_match___mygo_expr_1.F0.(ast2.Decl__FuncDecl); ok {
 							__mygo_expr_2 = MygoIN5SliceM6Append(__mygo_mt_p2, __mygo_match___mygo_expr_3.F0)
 						} else {
 							__mygo_expr_2 = __mygo_mt_p2
  /*line zz_performance.gen_test.go:578:1*/						}
- /*line performance_test.mygo:463:9*/						next := __mygo_expr_2
- /*line performance_test.mygo:467:9*/						__tail_0 := __mygo_mt_p0
+ /*line performance_test.mygo:465:9*/						next := __mygo_expr_2
+ /*line performance_test.mygo:469:9*/						__tail_0 := __mygo_mt_p0
 						__tail_1 := __mygo_mt_p1 + 1
 						__tail_2 := next
 						__mygo_mt_p0, __mygo_mt_p1, __mygo_mt_p2 = __tail_0, __tail_1, __tail_2
 						__mygo_state = 0
 						continue
- /*line performance_test.mygo:460:5*/					} else {
+ /*line performance_test.mygo:462:5*/					} else {
 						panic("non-exhaustive switch")
  /*line zz_performance.gen_test.go:588:1*/					}
 				}

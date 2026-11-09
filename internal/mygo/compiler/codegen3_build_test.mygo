@@ -602,6 +602,51 @@ func TestCodegen3BuildStaysOutsideSourceTree(t: Ref[testing.T]) -> ()
   assertNoGeneratedSources(t, dir)
 end
 
+func TestCodegen3ImportedEnumConstructorsInClosures(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  writeFixture(t, dir, "go.mod", "module example.invalid/enum-closure\n\ngo 1.24\n")
+  writeFixture(t, dir, "dep/dep.mygo", "package dep\n\nenum E\n  Value(Int)\n  Empty\nend\n")
+  writeFixture(t, dir, "app/app.mygo", """package app
+
+import dep "example.invalid/enum-closure/dep"
+
+func Direct(value: Int) -> dep.E
+  dep.E.Value(value)
+end
+
+func Closure() -> func(Int) -> dep.E
+  func(value: Int) -> dep.E
+    dep.E.Value(value)
+  end
+end
+
+func Empty() -> func() -> dep.E
+  func() -> dep.E
+    dep.E.Empty
+  end
+end
+""")
+  writeFixture(t, dir, "app/app_test.go", """package app
+import "testing"
+func TestConstructors(t *testing.T) {
+  if Direct(3).Value.F0 != 3 || Closure()(4).Value.F0 != 4 { t.Fatal("non-generic constructor") }
+  if Empty()().Tag != 2 { t.Fatal("nullary constructor") }
+}
+""")
+  [0, 1, 2].Each(func(level: Int) -> ()
+    switch buildCodegen3(
+      dir,
+      PipelineOptions { Codegen3: true, OptimizationLevel: level, IR3Dump: "", EmitDir: "", NoPrelude: true },
+      true,
+      ["./app"]
+    )
+      case Err(err) => t.Fatalf("imported enum constructors at O%d: %v", level, err)
+      case Ok(_) => ()
+    end
+  end)
+end
+
 func TestSyncBootstrapWithOptionsSelectsCodegen3(t: Ref[testing.T]) -> ()
   let dir = t.TempDir()
   t.Setenv("MYGO_CACHE", t.TempDir())

@@ -1,0 +1,450 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+# Signature records contain no executable bodies. They are only safe to use
+# after the complete dependency summary has been validated and seeded into a
+# pretyped inference path.
+struct Codegen3CachedParam
+  Name: String `json:"name"`
+  Type: Codegen3CachedType `json:"type"`
+  TypeSpan: ast2.SourceSpan `json:"typeSpan"`
+  Span: ast2.SourceSpan `json:"span"`
+end
+
+struct Codegen3CachedField
+  Name: String `json:"name"`
+  Type: Codegen3CachedType `json:"type"`
+  TypeSpan: ast2.SourceSpan `json:"typeSpan"`
+  Tag: Slice[String] `json:"tag,omitempty"`
+  Span: ast2.SourceSpan `json:"span"`
+end
+
+struct Codegen3CachedVariant
+  Name: String `json:"name"`
+  Fields: Slice[Codegen3CachedType] `json:"fields,omitempty"`
+  FieldSpans: Slice[ast2.SourceSpan] `json:"fieldSpans,omitempty"`
+  Named: Bool `json:"named,omitempty"`
+  Names: Slice[String] `json:"names,omitempty"`
+  Span: ast2.SourceSpan `json:"span"`
+end
+
+func codegen3EncodeField(field: ast2.Field) -> Codegen3CachedField
+  let tag = switch field.Tag
+    case None => [] as Slice[String]
+    case Some(value) => [value]
+  end
+  Codegen3CachedField { Name: field.Name, Type: codegen3EncodeTypeExpr(field.Type), TypeSpan: field.TypeSpan, Tag: tag, Span: field.Span }
+end
+
+func codegen3DecodeFields(items: Slice[Codegen3CachedField], index: Int, out: Slice[ast2.Field]) -> Option[Slice[ast2.Field]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        if item.Name == "" || item.Tag.Len() > 1 then None else
+          switch codegen3DecodeTypeExpr(item.Type)
+            case None => None
+            case Some(typ) => codegen3DecodeFields(items, index + 1, out.Append(ast2.Field { Name: item.Name, Type: typ, TypeSpan: item.TypeSpan, Tag: item.Tag.Get(0), Span: item.Span }))
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3EncodeVariant(variant: ast2.Variant) -> Codegen3CachedVariant
+  Codegen3CachedVariant {
+    Name: variant.Name,
+    Fields: variant.Fields.Map(codegen3EncodeTypeExpr),
+    FieldSpans: variant.FieldSpans,
+    Named: variant.Named,
+    Names: variant.Names,
+    Span: variant.Span,
+  }
+end
+
+func codegen3DecodeVariants(items: Slice[Codegen3CachedVariant], index: Int, out: Slice[ast2.Variant]) -> Option[Slice[ast2.Variant]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        if item.Name == "" || (item.Named && item.Names.Len() != item.Fields.Len()) then None else
+          switch codegen3DecodeTypeExprs(item.Fields, 0, [])
+            case None => None
+            case Some(fields) => codegen3DecodeVariants(items, index + 1, out.Append(ast2.Variant {
+              Name: item.Name,
+              Fields: fields,
+              FieldSpans: item.FieldSpans,
+              Named: item.Named,
+              Names: item.Names,
+              Span: item.Span,
+            }))
+          end
+        end
+      end
+    end
+  end
+end
+
+struct Codegen3CachedConstraint
+  Name: String `json:"name"`
+  BindName: Slice[String] `json:"bindName,omitempty"`
+  Args: Slice[Codegen3CachedType] `json:"args,omitempty"`
+  Span: ast2.SourceSpan `json:"span"`
+end
+
+struct Codegen3CachedFuncSig
+  Pos: ast2.SourcePos `json:"pos"`
+  Name: String `json:"name"`
+  TypeParams: Slice[String] `json:"typeParams,omitempty"`
+  Params: Slice[Codegen3CachedParam] `json:"params,omitempty"`
+  Ret: Slice[Codegen3CachedType] `json:"ret,omitempty"`
+  RetSpan: ast2.SourceSpan `json:"retSpan"`
+  Using: Slice[Codegen3CachedConstraint] `json:"using,omitempty"`
+end
+
+struct Codegen3CachedImplMethod
+  Pos: ast2.SourcePos `json:"pos"`
+  Sig: Codegen3CachedFuncSig `json:"sig"`
+end
+
+struct Codegen3CachedImpl
+  TypeParams: Slice[String] `json:"typeParams,omitempty"`
+  Target: Codegen3CachedType `json:"target"`
+  Interface: Slice[Codegen3CachedType] `json:"interface,omitempty"`
+  Methods: Slice[Codegen3CachedImplMethod] `json:"methods,omitempty"`
+end
+
+struct Codegen3CachedBinding
+  Name: String `json:"name"`
+  Type: Slice[Codegen3CachedType] `json:"type,omitempty"`
+  TypeSpan: Slice[ast2.SourceSpan] `json:"typeSpan,omitempty"`
+  Inferred: Slice[Codegen3CachedType] `json:"inferred,omitempty"`
+  Span: ast2.SourceSpan `json:"span"`
+end
+
+struct Codegen3CachedDecl
+  Kind: String `json:"kind"`
+  Name: String `json:"name,omitempty"`
+  Path: String `json:"path,omitempty"`
+  TypeParams: Slice[String] `json:"typeParams,omitempty"`
+  Target: Slice[Codegen3CachedType] `json:"target,omitempty"`
+  Fields: Slice[Codegen3CachedField] `json:"fields,omitempty"`
+  Variants: Slice[Codegen3CachedVariant] `json:"variants,omitempty"`
+  Signatures: Slice[Codegen3CachedFuncSig] `json:"signatures,omitempty"`
+  Binding: Slice[Codegen3CachedBinding] `json:"binding,omitempty"`
+  Implementation: Slice[Codegen3CachedImpl] `json:"implementation,omitempty"`
+end
+
+func codegen3EmptyCachedDecl(kind: String) -> Codegen3CachedDecl
+  Codegen3CachedDecl { Kind: kind, Name: "", Path: "", TypeParams: [], Target: [], Fields: [], Variants: [], Signatures: [], Binding: [], Implementation: [] }
+end
+
+func codegen3EncodeBinding(bind: ast2.Bind) -> Codegen3CachedBinding
+  let inferred = switch bind.Value.Type
+    case None => [] as Slice[Codegen3CachedType]
+    case Some(typ) => [codegen3EncodeMonoType(typ)]
+  end
+  Codegen3CachedBinding { Name: bind.Name, Type: codegen3EncodeOptionalTypeExpr(bind.Type), TypeSpan: codegen3EncodeSpan(bind.TypeSpan), Inferred: inferred, Span: bind.Span }
+end
+
+func codegen3EncodeDecl(decl: ast2.Decl) -> Codegen3CachedDecl
+  var out = codegen3EmptyCachedDecl("")
+  switch decl
+    case ImportDecl(alias, path) then
+      out.Kind = "import"
+      out.Name = alias
+      out.Path = path
+    end
+    case LetDecl(bind) then
+      out.Kind = "let"
+      out.Binding = [codegen3EncodeBinding(bind)]
+    end
+    case VarDecl(bind) then
+      out.Kind = "var"
+      out.Binding = [codegen3EncodeBinding(bind)]
+    end
+    case TypeAliasDecl(name, params, target) then
+      out.Kind = "alias"
+      out.Name = name
+      out.TypeParams = params
+      out.Target = [codegen3EncodeTypeExpr(target)]
+    end
+    case TypeDecl(name, params, target) then
+      out.Kind = "type"
+      out.Name = name
+      out.TypeParams = params
+      out.Target = [codegen3EncodeTypeExpr(target)]
+    end
+    case FuncDecl(name, typeParams, params, ret, _, constraints) then
+      let pos = ast2.SourcePos { SourceName: "", Line: 0, Column: 0 }
+      let span = ast2.SourceSpan { Start: pos, End: pos }
+      out.Kind = "function"
+      out.Signatures = [codegen3EncodeFuncSig(ast2.FuncSig { Pos: pos, Name: name, TypeParams: typeParams, Params: params, Ret: ret, RetSpan: span, Using: constraints })]
+    end
+    case StructDecl(name, params, fields) then
+      out.Kind = "struct"
+      out.Name = name
+      out.TypeParams = params
+      out.Fields = fields.Map(codegen3EncodeField)
+    end
+    case EnumDecl(name, params, variants) then
+      out.Kind = "enum"
+      out.Name = name
+      out.TypeParams = params
+      out.Variants = variants.Map(codegen3EncodeVariant)
+    end
+    case InterfaceDecl(name, params, methods) then
+      out.Kind = "interface"
+      out.Name = name
+      out.TypeParams = params
+      out.Signatures = methods.Map(codegen3EncodeFuncSig)
+    end
+    case ImplDecl(_, _, _, _) then
+      out.Kind = "impl"
+      switch codegen3EncodeImpl(decl)
+        case None => ()
+        case Some(value) => out.Implementation = [value]
+      end
+    end
+  end
+  out
+end
+
+func codegen3DecodeBinding(value: Codegen3CachedBinding) -> Option[ast2.Bind]
+  if value.Name == "" || value.Type.Len() > 1 || value.TypeSpan.Len() > 1 || value.Inferred.Len() > 1 then
+    None
+  else
+    switch codegen3DecodeTypeExprs(value.Type, 0, [])
+      case None => None
+      case Some(types) then
+        switch codegen3DecodeMonoTypes(value.Inferred, 0, [])
+          case None => None
+          case Some(inferred) then
+            var expr = ast2.UnitExprNode()
+            expr.Type = inferred.Get(0)
+            Some(ast2.Bind { Name: value.Name, Type: types.Get(0), TypeSpan: value.TypeSpan.Get(0), Value: expr, Span: value.Span })
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeFuncSigs(items: Slice[Codegen3CachedFuncSig], index: Int, out: Slice[ast2.FuncSig]) -> Option[Slice[ast2.FuncSig]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        switch codegen3DecodeFuncSig(item)
+          case None => None
+          case Some(sig) => codegen3DecodeFuncSigs(items, index + 1, out.Append(sig))
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeDecl(value: Codegen3CachedDecl) -> Option[ast2.Decl]
+  switch value.Kind
+    case "import" => if value.Name != "" && value.Path != "" => Some(ast2.Decl.ImportDecl(value.Name, value.Path)) else None
+    case "let" => codegen3DecodeBindingDecl(value, false)
+    case "var" => codegen3DecodeBindingDecl(value, true)
+    case "alias" => codegen3DecodeNamedTypeDecl(value, true)
+    case "type" => codegen3DecodeNamedTypeDecl(value, false)
+    case "struct" then
+      if value.Name == "" then None else
+        codegen3DecodeFields(value.Fields, 0, []).Map(func(fields: Slice[ast2.Field]) -> ast2.Decl ast2.Decl.StructDecl(value.Name, value.TypeParams, fields) end)
+      end
+    end
+    case "enum" then
+      if value.Name == "" then None else
+        codegen3DecodeVariants(value.Variants, 0, []).Map(func(variants: Slice[ast2.Variant]) -> ast2.Decl ast2.Decl.EnumDecl(value.Name, value.TypeParams, variants) end)
+      end
+    end
+    case "interface" then
+      if value.Name == "" then None else
+        codegen3DecodeFuncSigs(value.Signatures, 0, []).Map(func(methods: Slice[ast2.FuncSig]) -> ast2.Decl ast2.Decl.InterfaceDecl(value.Name, value.TypeParams, methods) end)
+      end
+    end
+    case "function" then
+      if value.Signatures.Len() != 1 then None else
+        switch value.Signatures.Get(0)
+          case None => None
+          case Some(sig) then
+            codegen3DecodeFuncSig(sig).Map(func(decoded: ast2.FuncSig) -> ast2.Decl
+              ast2.Decl.FuncDecl(decoded.Name, decoded.TypeParams, decoded.Params, decoded.Ret, ast2.UnitExprNode(), decoded.Using)
+            end)
+          end
+        end
+      end
+    end
+    case "impl" then
+      if value.Implementation.Len() != 1 then None else
+        switch value.Implementation.Get(0)
+          case None => None
+          case Some(implementation) => codegen3DecodeImpl(implementation)
+        end
+      end
+    end
+    case _ => None
+  end
+end
+
+func codegen3DecodeBindingDecl(value: Codegen3CachedDecl, mutable: Bool) -> Option[ast2.Decl]
+  if value.Binding.Len() != 1 then None else
+    switch value.Binding.Get(0)
+      case None => None
+      case Some(bind) then
+        codegen3DecodeBinding(bind).Map(func(decoded: ast2.Bind) -> ast2.Decl
+          if mutable => ast2.Decl.VarDecl(decoded) else ast2.Decl.LetDecl(decoded)
+        end)
+      end
+    end
+  end
+end
+
+func codegen3DecodeNamedTypeDecl(value: Codegen3CachedDecl, alias: Bool) -> Option[ast2.Decl]
+  if value.Name == "" || value.Target.Len() != 1 then None else
+    switch value.Target.Get(0)
+      case None => None
+      case Some(target) then
+        codegen3DecodeTypeExpr(target).Map(func(decoded: ast2.TypeExpr) -> ast2.Decl
+          if alias => ast2.Decl.TypeAliasDecl(value.Name, value.TypeParams, decoded) else ast2.Decl.TypeDecl(value.Name, value.TypeParams, decoded)
+        end)
+      end
+    end
+  end
+end
+
+func codegen3EncodeImplMethod(method: ast2.ImplMethod) -> Codegen3CachedImplMethod
+  Codegen3CachedImplMethod { Pos: method.Pos, Sig: codegen3EncodeFuncSig(method.Sig) }
+end
+
+func codegen3EncodeImpl(decl: ast2.Decl) -> Option[Codegen3CachedImpl]
+  switch decl
+    case ImplDecl(typeParams, target, iface, methods) then
+      Some(Codegen3CachedImpl {
+        TypeParams: typeParams,
+        Target: codegen3EncodeTypeExpr(target),
+        Interface: codegen3EncodeOptionalTypeExpr(iface),
+        Methods: methods.Map(codegen3EncodeImplMethod),
+      })
+    end
+    case _ => None
+  end
+end
+
+func codegen3DecodeImplMethods(items: Slice[Codegen3CachedImplMethod], index: Int, out: Slice[ast2.ImplMethod]) -> Option[Slice[ast2.ImplMethod]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        switch codegen3DecodeFuncSig(item.Sig)
+          case None => None
+          case Some(sig) => codegen3DecodeImplMethods(items, index + 1, out.Append(ast2.ImplMethod { Pos: item.Pos, Sig: sig, Body: ast2.UnitExprNode() }))
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeImpl(value: Codegen3CachedImpl) -> Option[ast2.Decl]
+  if value.Interface.Len() > 1 then None else
+    switch codegen3DecodeTypeExpr(value.Target)
+      case None => None
+      case Some(target) then
+        switch codegen3DecodeTypeExprs(value.Interface, 0, [])
+          case None => None
+          case Some(ifaces) then
+            switch codegen3DecodeImplMethods(value.Methods, 0, [])
+              case None => None
+              case Some(methods) => Some(ast2.Decl.ImplDecl(value.TypeParams, target, ifaces.Get(0), methods))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3EncodeOptionalTypeExpr(typ: Option[ast2.TypeExpr]) -> Slice[Codegen3CachedType]
+  switch typ
+    case None => []
+    case Some(value) => [codegen3EncodeTypeExpr(value)]
+  end
+end
+
+func codegen3EncodeParam(param: ast2.Param) -> Codegen3CachedParam
+  Codegen3CachedParam { Name: param.Name, Type: codegen3EncodeTypeExpr(param.Type), TypeSpan: param.TypeSpan, Span: param.Span }
+end
+
+func codegen3EncodeConstraint(constraint: ast2.Constraint) -> Codegen3CachedConstraint
+  let bind = switch constraint.BindName
+    case None => [] as Slice[String]
+    case Some(name) => [name]
+  end
+  Codegen3CachedConstraint { Name: constraint.Name, BindName: bind, Args: constraint.Args.Map(codegen3EncodeTypeExpr), Span: constraint.Span }
+end
+
+func codegen3EncodeFuncSig(sig: ast2.FuncSig) -> Codegen3CachedFuncSig
+  Codegen3CachedFuncSig {
+    Pos: sig.Pos,
+    Name: sig.Name,
+    TypeParams: sig.TypeParams,
+    Params: sig.Params.Map(codegen3EncodeParam),
+    Ret: codegen3EncodeOptionalTypeExpr(sig.Ret),
+    RetSpan: sig.RetSpan,
+    Using: sig.Using.Map(codegen3EncodeConstraint),
+  }
+end
+
+func codegen3DecodeParams(items: Slice[Codegen3CachedParam], index: Int, out: Slice[ast2.Param]) -> Option[Slice[ast2.Param]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        switch codegen3DecodeTypeExpr(item.Type)
+          case None => None
+          case Some(typ) => codegen3DecodeParams(items, index + 1, out.Append(ast2.Param { Name: item.Name, Type: typ, TypeSpan: item.TypeSpan, Span: item.Span }))
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeConstraints(items: Slice[Codegen3CachedConstraint], index: Int, out: Slice[ast2.Constraint]) -> Option[Slice[ast2.Constraint]]
+  if index >= items.Len() then Some(out) else
+    switch items.Get(index)
+      case None => None
+      case Some(item) then
+        if item.Name == "" || item.BindName.Len() > 1 then None else
+          switch codegen3DecodeTypeExprs(item.Args, 0, [])
+            case None => None
+            case Some(args) => codegen3DecodeConstraints(items, index + 1, out.Append(ast2.Constraint { Name: item.Name, BindName: item.BindName.Get(0), Args: args, Span: item.Span }))
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3DecodeFuncSig(sig: Codegen3CachedFuncSig) -> Option[ast2.FuncSig]
+  if sig.Name == "" || sig.Ret.Len() > 1 then None else
+    switch codegen3DecodeParams(sig.Params, 0, [])
+      case None => None
+      case Some(params) then
+        switch codegen3DecodeConstraints(sig.Using, 0, [])
+          case None => None
+          case Some(constraints) then
+            switch codegen3DecodeTypeExprs(sig.Ret, 0, [])
+              case None => None
+              case Some(ret) => Some(ast2.FuncSig { Pos: sig.Pos, Name: sig.Name, TypeParams: sig.TypeParams, Params: params, Ret: ret.Get(0), RetSpan: sig.RetSpan, Using: constraints })
+            end
+          end
+        end
+      end
+    end
+  end
+end

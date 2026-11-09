@@ -19,6 +19,7 @@ var activeCompactEnums: Slice[String] = []
 var activePackageImportPath: String = ""
 var activeEnumTagLayouts: Map[String, ir3.EnumTagLayout] = {}
 var activeTypeShapes: Map[String, ir3.TypeShape] = {}
+var activeFileImports: Slice[ir3.ImportSpec] = []
 
 func setCanonicalPackages(pkg: ir3.Package) -> ()
   # Loop labels are per generated file, so reset the counter at entry.
@@ -124,6 +125,7 @@ func generateFileWithContext(
   path: String
 ) -> Result[String, String]
   setCanonicalPackages(context.Package)
+  activeFileImports = context.ImportsByPath.Get(path).UnwrapOr([])
   # Qualified types must use the alias this file imports, not the path base.
   ir3.SetGoImportAliases(context.AliasesByPath.Get(path).UnwrapOr({}))
   let decls = context.DeclarationsByPath.Get(path).UnwrapOr([])
@@ -773,6 +775,17 @@ func paramTypes(params: Slice[ir3.Param], index: Int, out: Slice[String]) -> Sli
   end
 end
 
+func paramTypesWith(params: Slice[ir3.Param], typeParams: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= params.Len() then
+    out
+  else
+    switch params.Get(index)
+      case Some(param) => paramTypesWith(params, typeParams, index + 1, out.Append(ir3.GoTypeString(param.Type, typeParams)))
+      case None => paramTypesWith(params, typeParams, index + 1, out)
+    end
+  end
+end
+
 func goReturnTypes(results: Slice[ast2.MonoType], index: Int, out: Slice[String]) -> Slice[String]
   if index >= results.Len() then
     out
@@ -786,6 +799,23 @@ func goReturnTypes(results: Slice[ast2.MonoType], index: Int, out: Slice[String]
         end
       end
       case None => goReturnTypes(results, index + 1, out)
+    end
+  end
+end
+
+func goReturnTypesWith(results: Slice[ast2.MonoType], typeParams: Slice[String], index: Int, out: Slice[String]) -> Slice[String]
+  if index >= results.Len() then
+    out
+  else
+    switch results.Get(index)
+      case Some(result) then
+        if isUnitMono(result) then
+          goReturnTypesWith(results, typeParams, index + 1, out)
+        else
+          goReturnTypesWith(results, typeParams, index + 1, out.Append(ir3.GoTypeString(result, typeParams)))
+        end
+      end
+      case None => goReturnTypesWith(results, typeParams, index + 1, out)
     end
   end
 end
@@ -954,10 +984,14 @@ func goExpr(expr: ir3.Expr) -> Result[goast.Expr, String]
     case DynamicBoxExpr(value, interfacePackage, interfaceName, implementationID, constructorName) then
       switch goExpr(value.value())
         case Ok(payload) then
-          Ok(goast.Call(
-            goast.Ident("NewMygoDynamic" + interfaceName),
-            [payload, goast.MustExpr("\"" + implementationID + "\"")]
-          ))
+          if constructorName.HasPrefix("MygoDynamic") then
+            Ok(goast.Call(goast.Ident(constructorName), [payload]))
+          else
+            Ok(goast.Call(
+              goast.Ident("NewMygoDynamic" + interfaceName),
+              [payload, goast.MustExpr("\"" + implementationID + "\"")]
+            ))
+          end
         end
         case Err(message) => Err(message)
       end

@@ -166,10 +166,11 @@ func (c astContext) typeExpr(value Type) (ast2.TypeExpr, error) {
 		name := value.Name
 		if value.Package != "" && value.Package != c.packagePath {
 			alias, ok := c.aliases[value.Package]
-			if !ok {
+			if ok {
+				name = alias + "." + name
+			} else if value.Package != "github.com/mygo-lang/mygo/prelude" {
 				return ast2.UnitTypeExpr(), fmt.Errorf("no package import alias for %q", value.Package)
 			}
-			name = alias + "." + name
 		}
 		args := make([]ast2.TypeExpr, 0, len(value.Arguments))
 		for _, arg := range value.Arguments {

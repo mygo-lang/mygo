@@ -200,6 +200,7 @@ func benchInferMyGoImports(b: Ref[testing.B], funcs: Int, cold: Bool) -> ()
       Alias: "dep",
       Path: "example.com/benchdep",
       Decls: dep.Decls,
+      PretypedEnv: None,
       DynamicMetadataJSON: "",
       EnumIndex: BuildEnumDeclIndex(dep.Decls),
       ValueIndex: BuildValueDeclIndex(dep.Decls),

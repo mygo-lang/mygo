@@ -1,0 +1,29 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import filepath "go:path/filepath"
+import testing "go:testing"
+
+func TestCodegen3CachedSourceLocationRoundTrip(t: Ref[testing.T]) -> ()
+  let first = filepath.Join(t.TempDir(), "first")
+  let second = filepath.Join(t.TempDir(), "second")
+  let pos = ast2.SourcePos { SourceName: filepath.Join(first, "sub", "file.mygo"), Line: 12, Column: 7 }
+  switch codegen3RelativeSourcePos(first, pos)
+    case None => t.Fatal("source location could not be relativized")
+    case Some(relative) then
+      switch codegen3RebaseSourcePos(second, relative)
+        case None => t.Fatal("source location could not be rebased")
+        case Some(rebased) then
+          if rebased.SourceName != filepath.Join(second, "sub", "file.mygo") || rebased.Line != 12 || rebased.Column != 7 then
+            t.Fatal("rebased source location changed")
+          end
+        end
+      end
+    end
+  end
+  if codegen3RelativeSourceName(first, filepath.Join(first, "..", "other.mygo")).IsSome() ||
+    codegen3RebaseSourceName(second, "../other.mygo").IsSome() ||
+    codegen3RebaseSourceName(second, filepath.Join(second, "absolute.mygo")).IsSome() then
+    t.Fatal("source path outside the package was accepted")
+  end
+end

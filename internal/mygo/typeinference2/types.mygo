@@ -240,6 +240,7 @@ struct MyGoPackageInfo
   Alias: String
   Path: String
   Decls: Slice[ast2.Decl]
+  PretypedEnv: Option[Slice[EnvEntry]]
   DynamicMetadataJSON: String
   EnumIndex: Option[Map[String, EnumDeclIndexEntry]]
   ValueIndex: Option[Map[String, PackageValueIndexEntry]]
@@ -2294,7 +2295,9 @@ func cachedImportedPackageDiagnostic(
   packages: Slice[MyGoPackageInfo],
   goPkgs: Slice[GoPackageEntry]
 ) -> Result[ImportedPackageCacheEntry, ast2.Diagnostic]
-  if pkg.Decls.Len() == 0 then
+  if pkg.PretypedEnv.IsSome() then
+    buildImportedPackageCacheEntry(pkg, alias, packages, goPkgs)
+  elsif pkg.Decls.Len() == 0 then
     Ok(ImportedPackageCacheEntry {
       PrivateEnv: Env.New(),
       Exported: [],
@@ -2413,7 +2416,12 @@ func buildImportedPackageCacheEntry(
   let typeNames = collectMyGoTypeNames(pkg.Decls, 0, [])
   switch importedPackageEnvDiagnostic(pkg, packages, goPkgs)
     case Ok(pkgEnv) then
-      switch seedImportedPackageDecls(pkg, pkgEnv, packages)
+      let seeded = if pkg.PretypedEnv.IsSome() then
+        pkg.PretypedEnv.AndThen(func(entries: Slice[EnvEntry]) -> Option[Env] envPutBatchLatest(pkgEnv, entries) end)
+      else
+        seedImportedPackageDecls(pkg, pkgEnv, packages)
+      end
+      switch seeded
         case None then
           Err(inferenceDiagnostic("malformed imported package declarations: missing indexed entry"))
         end
@@ -3516,6 +3524,7 @@ func findMyGoPackageForImport(
       Alias: alias,
       Path: path,
       Decls: [],
+      PretypedEnv: None,
       DynamicMetadataJSON: "",
       EnumIndex: None,
       ValueIndex: None,
@@ -3703,6 +3712,7 @@ func findMyGoPackage(packages: Slice[MyGoPackageInfo], alias: String) -> MyGoPac
       Alias: alias,
       Path: alias,
       Decls: [],
+      PretypedEnv: None,
       DynamicMetadataJSON: "",
       EnumIndex: None,
       ValueIndex: None,
@@ -3765,13 +3775,13 @@ func seedMyGoPackageDecl(
     ResolvedConstraintArgs: {},
   }
   switch decl
-    case FuncDecl(name, tps, params, ret, _, constraints) then
+    case FuncDecl(name, tps, params, ret, bodyExpr, constraints) then
       switch paramsToTypesWithParamsInEnv(params, tps, env, state)
         case None => None
         case Some(paramTypes) then
           let retType = switch ret
             case Some(t) => typeFromASTInEnvWithParams(t, tps, env, state)
-            case None => ast2.MonoType.TUnit
+            case None => bodyExpr.Type.UnwrapOr(ast2.MonoType.TUnit)
           end
           let body = ast2.MonoType.TFunc(paramTypes, Ref.new(retType))
           seedMyGoPackageDecls(

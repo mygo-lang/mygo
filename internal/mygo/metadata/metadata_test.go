@@ -48,6 +48,23 @@ func TestRenderAndExtractSource(t *testing.T) {
 	}
 }
 
+func TestExportedDeclsReconstructsImplicitPreludeType(t *testing.T) {
+	value := &PackageMetadata{
+		Package: PackageIdentity{Name: "api", ImportPath: "example.com/api"},
+		Exports: Exports{Types: []TypeExport{{Name: "Record", Kind: "struct", Fields: []Field{{
+			Name: "Value", Type: Type{Kind: "named", Package: "github.com/mygo-lang/mygo/prelude", Name: "Option", Arguments: []Type{{Kind: "builtin", Name: "int"}}},
+		}}}}},
+	}
+	decls, err := value.ExportedDecls()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields := ast2.DeclStructFields(decls[0])
+	if len(fields) != 1 || !ast2.TypeIsNamed(fields[0].Type) || ast2.TypeNamedName(fields[0].Type) != "Option" || len(ast2.TypeNamedArgs(fields[0].Type)) != 1 {
+		t.Fatalf("implicit prelude type = %#v", fields)
+	}
+}
+
 func TestExportedDeclsReconstructsSignaturesAndPackageAliases(t *testing.T) {
 	value := &PackageMetadata{
 		Package: PackageIdentity{Name: "api", ImportPath: "example.com/project/api"},

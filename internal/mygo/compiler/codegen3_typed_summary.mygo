@@ -1,0 +1,423 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import json "go:encoding/json"
+import os "go:os"
+import filepath "go:path/filepath"
+
+struct Codegen3TypedSummaryEnvelope
+  Payload: String `json:"payload"`
+  Checksum: String `json:"checksum"`
+end
+
+# Increment whenever the record shape or completeness semantics change so
+# older entries miss safely without manual cache cleanup.
+func codegen3TypedSummaryVersion() -> Int
+  2
+end
+
+func codegen3TypedSummaryPath(packageKey: String, inputKind: String) -> String
+  let root = codegen3CacheRootPath()
+  if root == "" ||
+    packageKey == "" ||
+    (inputKind != "main" && inputKind != "internal-test" && inputKind != "external-test") then
+    ""
+  else
+    let key = codegen3HashParts([packageKey, inputKind])
+    filepath.Join(root, "typed", key.Slice(0, 2).UnwrapOr(""), key + ".json")
+  end
+end
+
+# Typed summaries are separate from output entries so old output cache hits
+# remain valid. Atomic publication prevents readers observing partial records.
+func codegen3WriteTypedSummary(
+  packageKey: String,
+  summary: Codegen3TypedSummary
+) -> Result[(), Error]
+  let path = codegen3TypedSummaryPath(packageKey, summary.InputKind)
+  if path == "" || summary.Version != codegen3TypedSummaryVersion() || !summary.Complete || summary.InputKey == "" then
+    Ok(())
+  else
+    switch json.Marshal(summary)
+      case Err(err) => Err(err)
+      case Ok(payload) then
+        let envelope = Codegen3TypedSummaryEnvelope {
+          Payload: payload as String,
+          Checksum: codegen3HashBytes(payload),
+        }
+        switch json.Marshal(envelope)
+          case Err(err) => Err(err)
+          case Ok(data) then
+            switch os.MkdirAll(filepath.Dir(path), 0o755 as os.FileMode)
+              case Err(err) => Err(err)
+              case Ok(_) => bootstrapAtomicWrite(path, data as String)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# Call only after validating the package summary and its dependency graph.
+func codegen3ReadTypedSummary(
+  root: String,
+  packageKey: String,
+  packagePath: String,
+  inputKind: String,
+  inputKey: String
+) -> Option[Codegen3TypedSummary]
+  let path = codegen3TypedSummaryPath(packageKey, inputKind)
+  if path == "" || codegen3CacheLookup(packageKey) == "" then
+    None
+  else
+    switch os.ReadFile(path)
+      case Err(_) => None
+      case Ok(data) then
+        var envelope = Codegen3TypedSummaryEnvelope { Payload: "", Checksum: "" }
+        switch json.Unmarshal(data, Ref.new(envelope))
+          case Err(_) => None
+          case Ok(_) then
+            if envelope.Checksum == "" ||
+              codegen3HashBytes(envelope.Payload as Slice[Byte]) != envelope.Checksum then
+              None
+            else
+              codegen3DecodeTypedSummary(envelope.Payload as Slice[Byte], root, packagePath, inputKind, inputKey)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# Overlay inputs are not represented by the persistent package key. Cycle
+# detection must run before accepting either an output or typed-summary hit.
+func codegen3ReadVerifiedTypedSummary(
+  dir: String,
+  state: BootstrapState,
+  inputKind: String
+) -> Option[Codegen3TypedSummary]
+  if !state.Codegen3 ||
+    !state.CacheEnabled ||
+    state.ParseCache.IsSome() ||
+    state.OverlayStamps.Len() > 0 ||
+    state.Compiling.Get(dir).UnwrapOr(false) then
+    None
+  else
+    let fingerprint = codegen3SourceFingerprint(dir, state)
+    switch codegen3ReadPackageSummary(fingerprint)
+      case None => None
+      case Some(packageSummary) then
+        if !codegen3ValidatePackageSummary(dir, state, packageSummary, {}) then
+          None
+        else
+          codegen3ReadTypedSummary(
+            dir,
+            packageSummary.PackageKey,
+            packageSummary.PackagePath,
+            inputKind,
+            packageSummary.InputKey
+          )
+        end
+      end
+    end
+  end
+end
+
+# This record is independent of the generated-output cache. A valid record
+# still requires verification against the package and dependency cache keys.
+struct Codegen3TypedSource
+  Path: String `json:"path"`
+  PackagePath: String `json:"packagePath"`
+  Decls: Slice[Codegen3CachedDecl] `json:"decls"`
+  Positions: Slice[ast2.SourcePos] `json:"positions"`
+end
+
+struct Codegen3TypedSummary
+  Version: Int `json:"version"`
+  Complete: Bool `json:"complete"`
+  PackagePath: String `json:"packagePath"`
+  InputKind: String `json:"inputKind"`
+  InputKey: String `json:"inputKey"`
+  DynamicMetadata: String `json:"dynamicMetadata"`
+  Sources: Slice[Codegen3TypedSource] `json:"sources"`
+  Env: Slice[Codegen3CachedEnvEntry] `json:"env"`
+  Fields: Slice[Codegen3CachedFieldEntry] `json:"fields"`
+  Instances: Slice[Codegen3CachedInstance] `json:"instances"`
+end
+
+func codegen3EmptyTypedSummary() -> Codegen3TypedSummary
+  Codegen3TypedSummary {
+    Version: 0,
+    Complete: false,
+    PackagePath: "",
+    InputKind: "",
+    InputKey: "",
+    DynamicMetadata: "",
+    Sources: [],
+    Env: [],
+    Fields: [],
+    Instances: [],
+  }
+end
+
+func codegen3DecodeTypedItems[A, B](
+  items: Slice[A],
+  decode: func(A) -> Option[B]
+) -> Option[Slice[B]]
+  items.Fold(
+    Some([] as Slice[B]),
+    func(acc: Option[Slice[B]], item: A) -> Option[Slice[B]]
+      acc.AndThen(func(values: Slice[B]) -> Option[Slice[B]]
+        decode(item).Map(func(value: B) -> Slice[B] values.Append(value) end)
+      end)
+    end
+  )
+end
+
+func codegen3DecodeTypedSource(source: Codegen3TypedSource) -> Option[typeinference2.PkgDeclSource]
+  if source.Decls.Len() != source.Positions.Len() then
+    None
+  else
+    codegen3DecodeTypedItems(source.Decls, codegen3DecodeDecl).Map(func(decls: Slice[ast2.Decl]) -> typeinference2.PkgDeclSource
+      typeinference2.PkgDeclSource {
+        Path: source.Path,
+        PackageImportPath: source.PackagePath,
+        Decls: decls,
+        DeclPositions: source.Positions,
+      }
+    end)
+  end
+end
+
+# The result is pretyped context. Its placeholder bodies must never be passed
+# to InferPackageWithExternalDiagnostic, which infers source bodies again.
+func codegen3TypedSummaryPackageInfo(
+  summary: Codegen3TypedSummary
+) -> Option[typeinference2.PackageInfo]
+  switch codegen3DecodeTypedItems(summary.Sources, codegen3DecodeTypedSource)
+    case None => None
+    case Some(sources) then
+      switch codegen3DecodeTypedItems(summary.Env, codegen3DecodeEnvEntry)
+        case None => None
+        case Some(env) then
+          switch codegen3DecodeTypedItems(summary.Fields, codegen3DecodeFieldEntry)
+            case None => None
+            case Some(fields) then
+              switch codegen3DecodeTypedItems(summary.Instances, codegen3DecodeInstance)
+                case None => None
+                case Some(instances) then
+                  Some(typeinference2.PackageInfo {
+                    Env: env,
+                    Fields: fields,
+                    GoPackages: [],
+                    MyGoPackages: [],
+                    Instances: instances,
+                    Solver: typeinference2.Solver { Instances: instances },
+                    TypedDecls: bootstrapFlattenSources(sources, 0, []),
+                    ExternalTypedDecls: [],
+                    TypedDeclSources: sources,
+                    ExternalTypedDeclSources: [],
+                    ResolvedConstraintArgs: {},
+                  })
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+# This constructor is used only after inference has completed. Source paths
+# and every nested location must be representable relative to the package root.
+func codegen3TypedSummaryFromInfo(
+  root: String,
+  packagePath: String,
+  inputKind: String,
+  inputKey: String,
+  dynamicMetadata: String,
+  sources: Slice[typeinference2.PkgDeclSource],
+  info: typeinference2.PackageInfo
+) -> Option[Codegen3TypedSummary]
+  if packagePath == "" ||
+    inputKey == "" ||
+    sources.Len() == 0 ||
+    (inputKind != "main" && inputKind != "internal-test" && inputKind != "external-test") then
+    None
+  else
+    let allPositionsPresent = sources.Fold(
+      true,
+      func(ok: Bool, source: typeinference2.PkgDeclSource) -> Bool
+        ok &&
+          source.Decls.Len() == source.DeclPositions.Len() &&
+          source.DeclPositions.Fold(
+            true,
+            func(valid: Bool, pos: ast2.SourcePos) -> Bool
+              valid && pos.SourceName != "" && pos.Line > 0 && pos.Column > 0
+            end
+          )
+      end
+    )
+    if !allPositionsPresent then
+      None
+    else
+      let summary = Codegen3TypedSummary {
+        Version: codegen3TypedSummaryVersion(),
+        Complete: true,
+        PackagePath: packagePath,
+        InputKind: inputKind,
+        InputKey: inputKey,
+        DynamicMetadata: dynamicMetadata,
+        Sources: sources.Map(func(source: typeinference2.PkgDeclSource) -> Codegen3TypedSource
+          Codegen3TypedSource {
+            Path: source.Path,
+            PackagePath: packagePath,
+            Decls: source.Decls.Map(codegen3EncodeDecl),
+            Positions: source.DeclPositions,
+          }
+        end),
+        Env: info.Env.Map(codegen3EncodeEnvEntry),
+        Fields: info.Fields.Map(codegen3EncodeFieldEntry),
+        Instances: info.Instances.Map(codegen3EncodeInstance),
+      }
+      codegen3RelocateTypedSummary(root, true, summary)
+    end
+  end
+end
+
+func codegen3TypedSummaryHasFields(data: Slice[Byte]) -> Bool
+  var fields: Map[String, json.RawMessage] = {}
+  switch json.Unmarshal(data, Ref.new(fields))
+    case Err(_) => false
+    case Ok(_) then
+      [
+        "version",
+        "complete",
+        "packagePath",
+        "inputKind",
+        "inputKey",
+        "dynamicMetadata",
+        "sources",
+        "env",
+        "fields",
+        "instances",
+      ].Fold(
+        true,
+        func(ok: Bool, key: String) -> Bool
+          ok &&
+            fields.Get(key).Map(func(raw: json.RawMessage) -> Bool
+              (raw as String) != "null"
+            end).UnwrapOr(false)
+        end
+      )
+    end
+  end
+end
+
+func codegen3CachedDeclComplete(decl: Codegen3CachedDecl) -> Bool
+  if codegen3DecodeDecl(decl).IsNone() then
+    false
+  elsif decl.Kind == "let" || decl.Kind == "var" then
+    switch decl.Binding.Get(0)
+      case None => false
+      case Some(binding) => binding.Type.Len() == 1 || binding.Inferred.Len() == 1
+    end
+  else
+    true
+  end
+end
+
+func codegen3CachedDeclHasScheme(
+  decl: Codegen3CachedDecl,
+  env: Slice[Codegen3CachedEnvEntry]
+) -> Bool
+  let name = if decl.Kind == "function" then
+    decl.Signatures.Get(0).Map(func(sig: Codegen3CachedFuncSig) -> String
+      sig.Name
+    end).UnwrapOr("")
+  elsif decl.Kind == "let" || decl.Kind == "var" then
+    decl.Binding.Get(0).Map(func(binding: Codegen3CachedBinding) -> String
+      binding.Name
+    end).UnwrapOr("")
+  else
+    ""
+  end
+  if name == "" then
+    decl.Kind != "function" && decl.Kind != "let" && decl.Kind != "var"
+  else
+    env.Fold(
+      false,
+      func(found: Bool, entry: Codegen3CachedEnvEntry) -> Bool
+        found || entry.Name == name
+      end
+    )
+  end
+end
+
+# This validates record structure and rebases locations. It must not be used as
+# a declaration cache hit until the enclosing cache itself verifies.
+func codegen3DecodeTypedSummary(
+  data: Slice[Byte],
+  root: String,
+  packagePath: String,
+  inputKind: String,
+  inputKey: String
+) -> Option[Codegen3TypedSummary]
+  var summary = codegen3EmptyTypedSummary()
+  if !codegen3TypedSummaryHasFields(data) then
+    None
+  else
+    switch json.Unmarshal(data, Ref.new(summary))
+      case Err(_) => None
+      case Ok(_) then
+        if summary.Version != codegen3TypedSummaryVersion() ||
+          !summary.Complete ||
+          packagePath == "" ||
+          inputKey == "" ||
+          summary.PackagePath != packagePath ||
+          summary.InputKind != inputKind ||
+          summary.InputKey != inputKey ||
+          (inputKind != "main" && inputKind != "internal-test" && inputKind != "external-test") ||
+          summary.Sources.Len() == 0 then
+          None
+        else
+          let validSources = summary.Sources.Fold(
+            true,
+            func(valid: Bool, source: Codegen3TypedSource) -> Bool
+              valid &&
+                source.PackagePath == packagePath &&
+                source.Path != "" &&
+                codegen3RebaseSourceName(root, source.Path).IsSome() &&
+                source.Decls.Len() == source.Positions.Len() &&
+                source.Decls.Fold(
+                  true,
+                  func(ok: Bool, decl: Codegen3CachedDecl) -> Bool ok && codegen3CachedDeclComplete(decl) && codegen3CachedDeclHasScheme(decl, summary.Env) end
+                )
+            end
+          )
+          let validEnv = summary.Env.Fold(
+            true,
+            func(ok: Bool, entry: Codegen3CachedEnvEntry) -> Bool ok && codegen3DecodeEnvEntry(entry).IsSome() end
+          )
+          let validFields = summary.Fields.Fold(
+            true,
+            func(ok: Bool, entry: Codegen3CachedFieldEntry) -> Bool ok && codegen3DecodeFieldEntry(entry).IsSome() end
+          )
+          let validInstances = summary.Instances.Fold(
+            true,
+            func(ok: Bool, entry: Codegen3CachedInstance) -> Bool ok && codegen3DecodeInstance(entry).IsSome() end
+          )
+          if validSources && validEnv && validFields && validInstances then
+            codegen3RelocateTypedSummary(root, false, summary)
+          else
+            None
+          end
+        end
+      end
+    end
+  end
+end

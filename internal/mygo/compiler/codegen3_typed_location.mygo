@@ -1,0 +1,42 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import filepath "go:path/filepath"
+
+# Cache locations are accepted only when they remain inside the package root.
+# Empty source names represent synthetic positions and remain empty.
+func codegen3RelativeSourceName(root: String, name: String) -> Option[String]
+  if name == "" then Some("") else
+    if !filepath.IsAbs(root) then None else
+      let absolute = filepath.Abs(name).UnwrapOr("")
+      switch filepath.Rel(root, absolute)
+        case Err(_) => None
+        case Ok(relative) then
+          if relative == "." || relative == ".." || relative.HasPrefix("../") || relative.HasPrefix("..\\") || filepath.IsAbs(relative) then None else Some(relative) end
+        end
+      end
+    end
+  end
+end
+
+func codegen3RebaseSourceName(root: String, name: String) -> Option[String]
+  if name == "" then Some("") else
+    if !filepath.IsAbs(root) || filepath.IsAbs(name) || filepath.Clean(name) != name || name == "." || name == ".." || name.HasPrefix("../") || name.HasPrefix("..\\") then
+      None
+    else
+      Some(filepath.Join(root, name))
+    end
+  end
+end
+
+func codegen3RelativeSourcePos(root: String, pos: ast2.SourcePos) -> Option[ast2.SourcePos]
+  codegen3RelativeSourceName(root, pos.SourceName).Map(func(name: String) -> ast2.SourcePos
+    ast2.SourcePos { SourceName: name, Line: pos.Line, Column: pos.Column }
+  end)
+end
+
+func codegen3RebaseSourcePos(root: String, pos: ast2.SourcePos) -> Option[ast2.SourcePos]
+  codegen3RebaseSourceName(root, pos.SourceName).Map(func(name: String) -> ast2.SourcePos
+    ast2.SourcePos { SourceName: name, Line: pos.Line, Column: pos.Column }
+  end)
+end

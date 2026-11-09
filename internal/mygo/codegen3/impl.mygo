@@ -8,6 +8,7 @@ import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
 import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import goast "go:github.com/mygo-lang/mygo/internal/mygo/codegen2/goast"
 import codegen2 "github.com/mygo-lang/mygo/internal/mygo/codegen2"
+import strings "go:strings"
 # localHelperNames lists the helper functions this package defines itself. An
 # unqualified mangled helper reference that is not in this set must come from
 # the prelude dot-import.
@@ -108,17 +109,19 @@ func dynamicAdaptersForMethods(
           case None => dynamicAdaptersForMethods(data, ifaceName, index + 1, out)
           case Some(hiddenIndex) then
             let stem = implSymbol(data)
-            let adapterName = codegen2.DynamicAdapterSymbol(stem, ifaceName, method.Name)
+            let dot = strings.LastIndex(ifaceName, ".")
+            let shortName = if dot < 0 then ifaceName else ifaceName.Slice(dot + 1, ifaceName.Len()).UnwrapOr(ifaceName) end
+            let adapterName = codegen2.DynamicAdapterSymbol(stem, shortName, method.Name)
             let result = goast.DynamicAdapterDecl(
               adapterName,
-              [] as Slice[String],
+              method.TypeParams,
               goParamNames(method.Params, 0, []),
-              paramTypes(method.Params, 0, []),
+              paramTypesWith(method.Params, method.TypeParams, 0, []),
               hiddenIndex,
-              ir3.GoTypeString(data.TargetType, []),
+              ir3.GoTypeString(data.TargetType, method.TypeParams),
               codegen2.ImplMethodSymbol(stem, method.Name),
               [] as Slice[String],
-              goReturnTypes(method.Results, 0, [])
+              goReturnTypesWith(method.Results, method.TypeParams, 0, [])
             )
             switch result
               case Err(err) => Err("dynamic adapter " + method.Name + ": " + err.Error())

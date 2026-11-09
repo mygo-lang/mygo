@@ -5,6 +5,7 @@ Commit `cc5d576e9f` introduced verified warm-cache reuse, but a representative s
 ## What Changes
 
 - Make verified cached dependency declarations usable throughout codegen3 dependency discovery, including on-demand inference, while retaining safe fallback and overlay behavior.
+- Separate generated-output reuse from typed-dependency reuse, and retain methods, instances and diagnostic locations in the data used by inference.
 - Bound repeated validation and source hashing within a build, and avoid cache-specific input scans when caching is disabled without weakening invalidation.
 - Investigate and remove remaining material warm-path costs, including metadata staging, loading and repeated FFI collection when measurements justify it.
 - Add correctness, work-count, and representative cold, warm, disabled and incremental performance verification, including the self-host build/test workflow.

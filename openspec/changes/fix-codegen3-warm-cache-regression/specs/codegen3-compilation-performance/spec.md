@@ -12,6 +12,14 @@ For a codegen3 build with verified, compatible cached dependency information suf
 - **WHEN** required dependency data is missing, corrupt, incompatible, stale, or cannot represent the selected inputs
 - **THEN** the compiler compiles from the correct current sources and preserves uncached diagnostics and output
 
+#### Scenario: Cached prelude and methods support a changed importer
+- **WHEN** an importer changes while its prelude and dependencies have complete verified typed summaries containing their inherent methods and instances
+- **THEN** inference resolves those methods and instances without inferring placeholder bodies, and diagnostics and output match a cache-disabled build
+
+#### Scenario: Output hit precedes an incomplete declaration hit
+- **WHEN** a cached generated output is valid but a later importer needs declaration information absent from its typed summary
+- **THEN** the output can be reused and the compiler obtains the missing declarations through source-based compilation
+
 #### Scenario: Unsaved dependency overlay
 - **WHEN** editor analysis uses an unsaved imported dependency
 - **THEN** it uses the overlay-derived declarations instead of a disk-derived cached summary

@@ -334,19 +334,19 @@ func qualifiedVariant(callee: ir3.Expr, typ: Option[ast2.MonoType]) -> Option[St
           # Only treat `pkg.Enum.Variant` as a constructor when the expression's
           # type really is that enum; a struct field named like an enum must
           # stay a selector.
-          if qualifiedEnumMatches(typ, enumName) then
-            switch enumBase.value().Kind
-              case VarExpr(alias) then
+          switch enumBase.value().Kind
+            case VarExpr(alias) then
+              if qualifiedEnumMatches(typ, alias, enumName, variant) then
                 if isCanonicalAlias(alias) then
                   Some(alias + "." + enumName + "__" + variant)
                 else
                   Some(alias + "." + enumName + "__" + variant + "__Ctor")
                 end
+              else
+                None
               end
-              case _ => None
             end
-          else
-            None
+            case _ => None
           end
         end
         case _ => None
@@ -358,7 +358,7 @@ end
 
 # qualifiedEnumMatches reports whether typ is the imported enum `enumName`
 # (TQualifiedName wrapping TCon/TApp with that head).
-func qualifiedEnumMatches(typ: Option[ast2.MonoType], enumName: String) -> Bool
+func qualifiedEnumMatches(typ: Option[ast2.MonoType], alias: String, enumName: String, variant: String) -> Bool
   switch typ
     case Some(TQualifiedName(_, inner)) then
       switch inner.value()
@@ -372,7 +372,37 @@ func qualifiedEnumMatches(typ: Option[ast2.MonoType], enumName: String) -> Bool
         case _ => false
       end
     end
+    case Some(TCon(name)) => name == alias + "." + enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+    case Some(TApp(ctor, _)) then
+      switch ctor.value()
+        case TCon(name) => name == alias + "." + enumName && importedEnumHasVariant(alias, enumName, variant, 0)
+        case _ => false
+      end
+    end
     case _ => false
+  end
+end
+
+# Explicit return annotations can retain the source spelling `alias.Enum`
+# instead of an inferred qualified type. Confirm the imported declaration and
+# variant before treating that spelling as a constructor.
+func importedEnumHasVariant(alias: String, enumName: String, variant: String, index: Int) -> Bool
+  if index >= activeFileImports.Len() then
+    false
+  else
+    switch activeFileImports.Get(index)
+      case None => false
+      case Some(item) then
+        if !isGoImport(item.Path) && effectiveImportAlias(item) == alias then
+          switch activeEnumTagLayouts.Get(ir3.EnumTagLayoutKey(item.Path, enumName))
+            case Some(layout) => layout.VariantIDs.Get(variant).IsSome()
+            case None => false
+          end
+        else
+          importedEnumHasVariant(alias, enumName, variant, index + 1)
+        end
+      end
+    end
   end
 end
 
@@ -476,19 +506,19 @@ func enumCtorValue(
     end
     # Nullary variant of an imported enum: `pkg.Enum.Variant`.
     case FieldNamedExpr(enumBase, enumName) then
-      if qualifiedEnumMatches(expr.Type, enumName) then
-        switch enumBase.value().Kind
-          case VarExpr(alias) then
+      switch enumBase.value().Kind
+        case VarExpr(alias) then
+          if qualifiedEnumMatches(expr.Type, alias, enumName, variant) then
             if isCanonicalAlias(alias) then
-              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + "()")))
+              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + enumTypeArgsText(expr.Type) + "()")))
             else
-              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + "__Ctor()")))
+              Ok(Some(goast.MustExpr(alias + "." + enumName + "__" + variant + "__Ctor" + enumTypeArgsText(expr.Type) + "()")))
             end
+          else
+            Ok(None)
           end
-          case _ => Ok(None)
         end
-      else
-        Ok(None)
+        case _ => Ok(None)
       end
     end
     case _ => Ok(None)

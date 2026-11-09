@@ -1,0 +1,223 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import bytes "go:bytes"
+import json "go:encoding/json"
+import testing "go:testing"
+
+func TestCodegen3CachedDeclarationsRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "dep/file.mygo", Line: 4, Column: 2 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let typ = ast2.TypeExpr.NamedType("String", [])
+  var expr = ast2.UnitExprNode()
+  expr.Type = Some(ast2.MonoType.TCon("String"))
+  let binding = ast2.Bind { Name: "value", Type: Some(typ), TypeSpan: Some(span), Value: expr, Span: span }
+  switch codegen3DecodeDecl(codegen3EncodeDecl(ast2.Decl.LetDecl(binding)))
+    case Some(LetDecl(actual)) then
+      switch actual.Value.Type
+        case Some(inferred) then
+          if !ast2.MonoEqual(inferred, ast2.MonoType.TCon("String")) || actual.Span.Start.Line != 4 || actual.Span.Start.Column != 2 then
+            t.Fatal("cached binding lost its inferred type or location")
+          end
+        end
+        case None => t.Fatal("cached binding lost its inferred type")
+      end
+    end
+    case _ => t.Fatal("cached binding was rejected")
+  end
+  let sig = ast2.FuncSig { Pos: pos, Name: "Show", TypeParams: ["A"], Params: [], Ret: Some(typ), RetSpan: span, Using: [] }
+  let field = ast2.Field { Name: "Name", Type: typ, TypeSpan: span, Tag: Some("tag"), Span: span }
+  let variant = ast2.Variant { Name: "Value", Fields: [typ], FieldSpans: [span], Named: true, Names: ["name"], Span: span }
+  let decls = [
+    ast2.Decl.ImportDecl("dep", "example.invalid/dep"),
+    ast2.Decl.LetDecl(binding),
+    ast2.Decl.VarDecl(binding),
+    ast2.Decl.TypeAliasDecl("Alias", ["A"], typ),
+    ast2.Decl.TypeDecl("Type", ["A"], typ),
+    ast2.Decl.FuncDecl("Show", ["A"], [], Some(typ), expr, []),
+    ast2.Decl.StructDecl("Record", ["A"], [field]),
+    ast2.Decl.EnumDecl("Choice", ["A"], [variant]),
+    ast2.Decl.InterfaceDecl("Showable", ["A"], [sig]),
+    ast2.Decl.ImplDecl(["A"], typ, None, [ast2.ImplMethod { Pos: pos, Sig: sig, Body: expr }]),
+  ]
+  let _ = decls.Fold(0, func(count: Int, decl: ast2.Decl) -> Int
+    let encoded = codegen3EncodeDecl(decl)
+    switch json.Marshal(encoded)
+      case Err(err) => t.Fatalf("marshal %s: %v", encoded.Kind, err)
+      case Ok(data) then
+        var stored = codegen3EmptyCachedDecl("")
+        switch json.Unmarshal(data, Ref.new(stored))
+          case Err(err) => t.Fatalf("unmarshal %s: %v", encoded.Kind, err)
+          case Ok(_) then
+            switch codegen3DecodeDecl(stored)
+              case None => t.Fatalf("cached %s was rejected", encoded.Kind)
+              case Some(decoded) then
+                switch json.Marshal(codegen3EncodeDecl(decoded))
+                  case Err(err) => t.Fatalf("remarshal %s: %v", encoded.Kind, err)
+                  case Ok(actual) then
+                    if !bytes.Equal(data, actual) then t.Fatalf("cached %s changed: %s != %s", encoded.Kind, data, actual) end
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    count + 1
+  end)
+  if codegen3DecodeDecl(codegen3EmptyCachedDecl("function")).IsSome() || codegen3DecodeDecl(codegen3EmptyCachedDecl("unknown")).IsSome() then
+    t.Fatal("malformed declaration was accepted")
+  end
+end
+
+func TestCodegen3CachedMethodSignatureRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "dep/file.mygo", Line: 8, Column: 3 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let sig = ast2.FuncSig {
+    Pos: pos,
+    Name: "Map",
+    TypeParams: ["B"],
+    Params: [ast2.Param { Name: "self", Type: ast2.TypeExpr.NamedType("List", [ast2.TypeExpr.NamedType("A", [])]), TypeSpan: span, Span: span }],
+    Ret: Some(ast2.TypeExpr.NamedType("List", [ast2.TypeExpr.NamedType("B", [])])),
+    RetSpan: span,
+    Using: [ast2.Constraint { Name: "Show", BindName: Some("show"), Args: [ast2.TypeExpr.NamedType("B", [])], Span: span }],
+  }
+  let encoded = codegen3EncodeFuncSig(sig)
+  switch json.Marshal(encoded)
+    case Err(err) => t.Fatalf("marshal method signature: %v", err)
+    case Ok(data) then
+      var stored = Codegen3CachedFuncSig { Pos: pos, Name: "", TypeParams: [], Params: [], Ret: [], RetSpan: span, Using: [] }
+      switch json.Unmarshal(data, Ref.new(stored))
+        case Err(err) => t.Fatalf("unmarshal method signature: %v", err)
+        case Ok(_) then
+          switch codegen3DecodeFuncSig(stored)
+            case None => t.Fatal("method signature was rejected")
+            case Some(decoded) then
+              if decoded.Name != sig.Name || decoded.TypeParams.Len() != 1 || decoded.Params.Len() != 1 || decoded.Using.Len() != 1 || decoded.Pos.SourceName != pos.SourceName then
+                t.Fatal("method signature changed during round trip")
+              end
+              switch (decoded.Ret, sig.Ret)
+                case (Some(left), Some(right)) then
+                  if !ast2.TypesEqual(left, right) then t.Fatal("method result changed") end
+                end
+                case _ => t.Fatal("method result missing")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestCodegen3CachedImplRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "dep/file.mygo", Line: 8, Column: 3 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let sig = ast2.FuncSig { Pos: pos, Name: "Cons", TypeParams: [], Params: [], Ret: Some(ast2.TypeExpr.NamedType("List", [ast2.TypeExpr.NamedType("A", [])])), RetSpan: span, Using: [] }
+  let target = ast2.TypeExpr.NamedType("List", [ast2.TypeExpr.NamedType("A", [])])
+  let decl = ast2.Decl.ImplDecl(["A"], target, None, [ast2.ImplMethod { Pos: pos, Sig: sig, Body: ast2.UnitExprNode() }])
+  switch codegen3EncodeImpl(decl)
+    case None => t.Fatal("impl was not encoded")
+    case Some(value) then
+      switch codegen3DecodeImpl(value)
+        case None => t.Fatal("cached impl was rejected")
+        case Some(decoded) then
+          switch decoded
+            case ImplDecl(params, actualTarget, iface, methods) then
+              if params.Len() != 1 || !ast2.TypesEqual(target, actualTarget) || iface.IsSome() || methods.Len() != 1 then
+                t.Fatal("inherent impl changed during round trip")
+              end
+              switch methods.Get(0)
+                case None => t.Fatal("impl method missing")
+                case Some(method) then
+                  if method.Sig.Name != "Cons" || method.Pos.SourceName != pos.SourceName then
+                    t.Fatal("impl method changed during round trip")
+                  end
+                end
+              end
+            end
+            case _ => t.Fatal("cached impl decoded as another declaration")
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestCodegen3CachedTypeclassImplRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "dep/file.mygo", Line: 12, Column: 1 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let sig = ast2.FuncSig { Pos: pos, Name: "Show", TypeParams: [], Params: [], Ret: Some(ast2.TypeExpr.NamedType("String", [])), RetSpan: span, Using: [] }
+  let target = ast2.TypeExpr.NamedType("Item", [])
+  let iface = ast2.TypeExpr.NamedType("Show", [target])
+  let decl = ast2.Decl.ImplDecl([], target, Some(iface), [ast2.ImplMethod { Pos: pos, Sig: sig, Body: ast2.UnitExprNode() }])
+  switch codegen3EncodeImpl(decl)
+    case None => t.Fatal("typeclass impl was not encoded")
+    case Some(value) then
+      switch json.Marshal(value)
+        case Err(err) => t.Fatalf("marshal typeclass impl: %v", err)
+        case Ok(data) then
+          var decoded = Codegen3CachedImpl { TypeParams: [], Target: codegen3CachedType("", "", 0, []), Interface: [], Methods: [] }
+          switch json.Unmarshal(data, Ref.new(decoded))
+            case Err(err) => t.Fatalf("unmarshal typeclass impl: %v", err)
+            case Ok(_) then
+              switch codegen3DecodeImpl(decoded)
+                case None => t.Fatal("cached typeclass impl was rejected")
+                case Some(result) then
+                  switch result
+                    case ImplDecl(_, _, actualIface, methods) then
+                      switch actualIface
+                        case None => t.Fatal("cached typeclass interface was lost")
+                        case Some(actual) then
+                          if !ast2.TypesEqual(iface, actual) || methods.Len() != 1 then
+                            t.Fatal("typeclass impl changed during round trip")
+                          end
+                        end
+                      end
+                    end
+                    case _ => t.Fatal("cached typeclass interface was lost")
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func TestCodegen3CachedFieldsAndVariantsRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "dep/file.mygo", Line: 3, Column: 5 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let typ = ast2.TypeExpr.NamedType("String", [])
+  let fields = [ast2.Field { Name: "Name", Type: typ, TypeSpan: span, Tag: Some("json:name"), Span: span }]
+  switch codegen3DecodeFields(fields.Map(codegen3EncodeField), 0, [])
+    case None => t.Fatal("cached fields were rejected")
+    case Some(decoded) then
+      switch decoded.Get(0)
+        case None => t.Fatal("cached field missing")
+        case Some(field) then
+          if field.Name != "Name" || field.Tag.UnwrapOr("") != "json:name" || !ast2.TypesEqual(field.Type, typ) then
+            t.Fatal("cached field changed during round trip")
+          end
+        end
+      end
+    end
+  end
+  let variants = [ast2.Variant { Name: "Named", Fields: [typ], FieldSpans: [span], Named: true, Names: ["value"], Span: span }]
+  switch codegen3DecodeVariants(variants.Map(codegen3EncodeVariant), 0, [])
+    case None => t.Fatal("cached variants were rejected")
+    case Some(decoded) then
+      switch decoded.Get(0)
+        case None => t.Fatal("cached variant missing")
+        case Some(variant) then
+          if variant.Name != "Named" || !variant.Named || variant.Names.Get(0).UnwrapOr("") != "value" || variant.FieldSpans.Len() != 1 then
+            t.Fatal("cached variant changed during round trip")
+          end
+        end
+      end
+    end
+  end
+end

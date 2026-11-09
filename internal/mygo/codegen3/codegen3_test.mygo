@@ -99,6 +99,41 @@ func cg3Import(alias: String, path: String, file: String) -> ir3.ImportSpec
   }
 end
 
+func TestCodegen3ImportedEnumSourceSpellingRequiresMatchingVariant(t: Ref[testing.T]) -> ()
+  activeFileImports = [cg3Import("dep", "example.invalid/dep", "sample.mygo")]
+  let variants = {} as Map[String, Int]
+  variants.Set("Value", 1)
+  let layouts = {} as Map[String, ir3.EnumTagLayout]
+  layouts.Set(ir3.EnumTagLayoutKey("example.invalid/dep", "E"), ir3.EnumTagLayout {
+    FieldName: "Tag",
+    TagType: "uint8",
+    VariantIDs: variants,
+  })
+  activeEnumTagLayouts = layouts
+  let plain = Some(ast2.MonoType.TCon("dep.E"))
+  let generic = Some(ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("dep.E")), [ast2.MonoType.TCon("Int")]))
+  if !qualifiedEnumMatches(plain, "dep", "E", "Value") ||
+    !qualifiedEnumMatches(generic, "dep", "E", "Value") then
+    t.Fatal("source-spelled imported enum constructor was not recognized")
+  end
+  if qualifiedEnumMatches(plain, "dep", "E", "Other") ||
+    qualifiedEnumMatches(plain, "other", "E", "Value") ||
+    qualifiedEnumMatches(plain, "dep", "Struct", "Value") then
+    t.Fatal("unrelated selector was treated as an enum constructor")
+  end
+  let packageValue = cg3Expr(ir3.ExprKind.VarExpr("dep"))
+  let enumValue = cg3Expr(ir3.ExprKind.FieldNamedExpr(Ref.new(packageValue), "E"))
+  let constructor = cg3Expr(ir3.ExprKind.FieldNamedExpr(Ref.new(enumValue), "Value"))
+  activeCanonicalAliases = []
+  if qualifiedVariant(constructor, generic).UnwrapOr("") != "dep.E__Value__Ctor" then
+    t.Fatal("legacy imported constructor was not selected")
+  end
+  activeCanonicalAliases = ["dep"]
+  if qualifiedVariant(constructor, generic).UnwrapOr("") != "dep.E__Value" then
+    t.Fatal("canonical imported constructor was not selected")
+  end
+end
+
 func cg3Source(t: Ref[testing.T], files: Map[String, String], name: String) -> String
   switch files.Get(name)
     case Some(source) => source

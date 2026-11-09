@@ -1,0 +1,303 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import parser2 "github.com/mygo-lang/mygo/internal/mygo/parser2"
+import json "go:encoding/json"
+import filepath "go:path/filepath"
+import os "go:os"
+import testing "go:testing"
+
+func TestCodegen3TypedSummaryPretypedGenericMethod(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  codegen3CacheTestSources(t, root)
+  writeFixture(
+    t,
+    root,
+    "add.mygo",
+    """package fixture
+enum Choice[A]
+  Some(A)
+  None
+end
+impl[A] Choice[A]
+  func Echo(value: Choice[A]) -> Choice[A]
+    value
+  end
+end
+"""
+  )
+  let state = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, state, true)
+    case Err(err) => t.Fatalf("compile dependency: %v", err)
+    case Ok(_) => ()
+  end
+  let cached = codegen3ReadVerifiedTypedSummary(root, codegen3EarlyHitState(t, root), "main").Unwrap()
+  let pretyped = codegen3TypedSummaryPackageInfo(cached).Unwrap()
+  switch parser2.ParseFileAtDiagnostic(
+    "user.mygo",
+    "package fixture\nfunc Use(value: Choice[Int]) -> Choice[Int]\n  value.Echo()\nend\n"
+  )
+    case Err(err) => t.Fatalf("parse user: %s", ast2.RenderDiagnostic(err))
+    case Ok(file) then
+      let source = typeinference2.PkgDeclSource {
+        Path: "user.mygo",
+        PackageImportPath: "example.invalid/cache-fixture",
+        Decls: file.Decls,
+        DeclPositions: file.DeclPositions,
+      }
+      switch typeinference2.InferPackageWithExternalInfoDiagnostic([source], pretyped, [], [])
+        case Err(err) => t.Fatalf("pretyped generic method: %s", ast2.RenderDiagnostic(err))
+        case Ok(_) => ()
+      end
+      let original = state.SourcesCache.Get(root).Unwrap()
+      switch typeinference2.InferPackageWithExternalDiagnostic([source], original.Sources, [], [])
+        case Err(err) => t.Fatalf("source generic method: %s", ast2.RenderDiagnostic(err))
+        case Ok(_) => ()
+      end
+    end
+  end
+end
+
+func TestCodegen3TypedSourcesRetainImportPositions(t: Ref[testing.T]) -> ()
+  let importPos = ast2.SourcePos { SourceName: "one.mygo", Line: 2, Column: 1 }
+  let declPos = ast2.SourcePos { SourceName: "one.mygo", Line: 5, Column: 1 }
+  let importDecl = ast2.Decl.ImportDecl("x", "example.invalid/x")
+  let decl = ast2.Decl.TypeAliasDecl("Name", [], ast2.TypeExpr.NamedType("String", []))
+  let parsed = [typeinference2.PkgDeclSource {
+    Path: "one.mygo",
+    PackageImportPath: "example.invalid/pkg",
+    Decls: [
+      importDecl,
+      decl,
+    ],
+    DeclPositions: [
+      importPos,
+      declPos,
+    ],
+  }]
+  let typed = [typeinference2.PkgDeclSource {
+    Path: "one.mygo",
+    PackageImportPath: "example.invalid/pkg",
+    Decls: [decl],
+    DeclPositions: [declPos],
+  }]
+  let result = bootstrapTypedSourcesWithImports(parsed, typed).Get(0).Unwrap()
+  if result.Decls.Len() != 2 ||
+    result.DeclPositions.Len() != 2 ||
+    result.DeclPositions.Get(0).Unwrap().Line != 2 ||
+    result.DeclPositions.Get(1).Unwrap().Line != 5 then
+    t.Fatal("typed source lost declaration position alignment")
+  end
+end
+
+func TestCodegen3TypedSummaryValidation(t: Ref[testing.T]) -> ()
+  let root = t.TempDir()
+  let pos = ast2.SourcePos { SourceName: "source.mygo", Line: 7, Column: 2 }
+  var decl = codegen3EmptyCachedDecl("import")
+  decl.Name = "x"
+  decl.Path = "example/x"
+  var summary = codegen3EmptyTypedSummary()
+  summary.Version = codegen3TypedSummaryVersion()
+  summary.Complete = true
+  summary.PackagePath = "example/dep"
+  summary.InputKind = "main"
+  summary.InputKey = "key"
+  summary.Sources = [Codegen3TypedSource {
+    Path: "source.mygo",
+    PackagePath: "example/dep",
+    Decls: [decl],
+    Positions: [pos],
+  }]
+  switch json.Marshal(summary)
+    case Err(err) => t.Fatalf("marshal summary: %v", err)
+    case Ok(data) then
+      if codegen3DecodeTypedSummary(data, root, "example/dep", "main", "key").IsNone() then
+        t.Fatal("valid summary rejected")
+      end
+      if codegen3DecodeTypedSummary(data, root, "example/dep", "internal-test", "key").IsSome() then
+        t.Fatal("wrong input kind accepted")
+      end
+      if codegen3DecodeTypedSummary(data, root, "example/dep", "main", "changed").IsSome() then
+        t.Fatal("wrong input key accepted")
+      end
+    end
+  end
+  summary.Version = codegen3TypedSummaryVersion() - 1
+  switch json.Marshal(summary)
+    case Err(err) => t.Fatalf("marshal summary: %v", err)
+    case Ok(data) then
+      if codegen3DecodeTypedSummary(data, root, "example/dep", "main", "key").IsSome() then
+        t.Fatal("old-version summary accepted")
+      end
+    end
+  end
+  let missing = `{"version":2,"complete":true,"packagePath":"example/dep","inputKind":"main","inputKey":"key","sources":[]}` as Slice[Byte]
+  if codegen3DecodeTypedSummary(missing, root, "example/dep", "main", "key").IsSome() then
+    t.Fatal("missing fields accepted")
+  end
+  summary.Env = [Codegen3CachedEnvEntry {
+    Name: "bad",
+    Scheme: Codegen3CachedScheme {
+      Bound: [],
+      Predicates: [],
+      Body: codegen3CachedType("invalid", "", 0, []),
+    },
+  }]
+  if codegen3TypedSummaryPackageInfo(summary).IsSome() then
+    t.Fatal("malformed environment was decoded")
+  end
+end
+
+func TestCodegen3TypedSummaryCacheIntegrity(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let root = t.TempDir()
+  codegen3CacheTestSources(t, root)
+  writeFixture(t, root, "add.mygo", "package fixture\n\nfunc Add(a: Int, b: Int)\n  a + b\nend\n")
+  let state = codegen3EarlyHitState(t, root)
+  switch compileAbsoluteBootstrapDir(root, state, true)
+    case Err(err) => t.Fatalf("populate output cache: %v", err)
+    case Ok(_) => ()
+  end
+  let key = state.PackageKeys.Get(root).UnwrapOr("")
+  let packageSummary = codegen3ReadPackageSummary(codegen3SourceFingerprint(root, state)).Unwrap()
+  switch codegen3ReadVerifiedTypedSummary(root, codegen3EarlyHitState(t, root), "main")
+    case None => t.Fatal("completed compilation did not publish a typed summary")
+    case Some(cached) then
+      switch codegen3TypedSummaryPackageInfo(cached)
+        case None => t.Fatal("typed summary could not be decoded")
+        case Some(pretyped) then
+          switch parser2.ParseFileAtDiagnostic("user.mygo", "package fixture\nfunc Use() -> Int\n  Add(1, 2)\nend\n")
+            case Err(err) => t.Fatalf("parse importer: %s", ast2.RenderDiagnostic(err))
+            case Ok(file) then
+              let source = typeinference2.PkgDeclSource {
+                Path: "user.mygo",
+                PackageImportPath: "example.invalid/cache-fixture",
+                Decls: file.Decls,
+                DeclPositions: file.DeclPositions,
+              }
+              switch typeinference2.InferPackageWithExternalInfoDiagnostic([source], pretyped, [], [])
+                case Err(err) then
+                  t.Fatalf("infer with pretyped context: %s", ast2.RenderDiagnostic(err))
+                end
+                case Ok(_) => ()
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  let pos = ast2.SourcePos { SourceName: "add.mygo", Line: 2, Column: 1 }
+  var decl = codegen3EmptyCachedDecl("import")
+  decl.Name = "dep"
+  decl.Path = "example.invalid/dep"
+  var summary = codegen3EmptyTypedSummary()
+  summary.Version = codegen3TypedSummaryVersion()
+  summary.Complete = true
+  summary.PackagePath = "example.invalid/cache-fixture"
+  summary.InputKind = "main"
+  summary.InputKey = packageSummary.InputKey
+  summary.Sources = [Codegen3TypedSource {
+    Path: "add.mygo",
+    PackagePath: summary.PackagePath,
+    Decls: [decl],
+    Positions: [pos],
+  }]
+  switch codegen3WriteTypedSummary(key, summary)
+    case Err(err) => t.Fatalf("write typed summary: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3ReadTypedSummary(root, key, summary.PackagePath, "main", summary.InputKey).IsNone() then
+    t.Fatal("valid cached summary missed")
+  end
+  let warm = codegen3EarlyHitState(t, root)
+  if codegen3ReadVerifiedTypedSummary(root, warm, "main").IsNone() then
+    t.Fatal("verified summary missed")
+  end
+  warm.Compiling.Set(root, true)
+  if codegen3ReadVerifiedTypedSummary(root, warm, "main").IsSome() then
+    t.Fatal("active compilation accepted")
+  end
+  warm.Compiling.Delete(root)
+  if codegen3ReadTypedSummary(root, key, summary.PackagePath, "main", "other-key").IsSome() then
+    t.Fatal("changed input key was accepted")
+  end
+  let path = codegen3TypedSummaryPath(key, "main")
+  switch os.WriteFile(
+    path,
+    "{\"payload\":\"corrupt\",\"checksum\":\"bad\"}" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("corrupt typed summary: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3ReadTypedSummary(root, key, summary.PackagePath, "main", summary.InputKey).IsSome() then
+    t.Fatal("corrupt summary was accepted")
+  end
+end
+
+func TestCodegen3TypedSummaryLocations(t: Ref[testing.T]) -> ()
+  let first = t.TempDir()
+  let second = t.TempDir()
+  let pos = ast2.SourcePos { SourceName: filepath.Join(first, "input.mygo"), Line: 8, Column: 3 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let sig = Codegen3CachedFuncSig {
+    Pos: pos,
+    Name: "F",
+    TypeParams: [],
+    Params: [Codegen3CachedParam {
+      Name: "x",
+      Type: codegen3CachedType("syntax-unit", "", 0, []),
+      TypeSpan: span,
+      Span: span,
+    }],
+    Ret: [],
+    RetSpan: span,
+    Using: [],
+  }
+  var decl = codegen3EmptyCachedDecl("function")
+  decl.Signatures = [sig]
+  var summary = codegen3EmptyTypedSummary()
+  summary.Sources = [Codegen3TypedSource {
+    Path: pos.SourceName,
+    PackagePath: "example/dep",
+    Decls: [decl],
+    Positions: [pos],
+  }]
+  switch codegen3RelocateTypedSummary(first, true, summary)
+    case None => t.Fatal("failed to relativize positions")
+    case Some(relative) then
+      switch codegen3RelocateTypedSummary(second, false, relative)
+        case None => t.Fatal("failed to rebase positions")
+        case Some(rebased) then
+          let source = rebased.Sources.Get(0).Unwrap()
+          let actual = source.Decls.Get(0).Unwrap().Signatures.Get(0).Unwrap().Params.Get(0).Unwrap().Span.Start
+          if actual.SourceName != filepath.Join(second, "input.mygo") ||
+            actual.Line != 8 ||
+            actual.Column != 3 then
+            t.Fatal("nested position changed")
+          end
+        end
+      end
+    end
+  end
+  let outside = ast2.SourcePos {
+    SourceName: filepath.Join(first, "..", "outside.mygo"),
+    Line: 1,
+    Column: 1,
+  }
+  summary.Sources = [Codegen3TypedSource {
+    Path: pos.SourceName,
+    PackagePath: "example/dep",
+    Decls: [decl],
+    Positions: [outside],
+  }]
+  if codegen3RelocateTypedSummary(first, true, summary).IsSome() then
+    t.Fatal("outside location accepted")
+  end
+  if summary.Sources.Get(0).Unwrap().Path != pos.SourceName then
+    t.Fatal("rejected input was mutated")
+  end
+end

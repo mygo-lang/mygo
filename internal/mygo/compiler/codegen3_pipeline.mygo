@@ -32,6 +32,7 @@ func newBootstrapCodegen3State(
   manifestPath: String,
   emitRoot: String
 ) -> BootstrapState
+  let cacheEnabled = codegen3CacheEnabled()
   BootstrapState {
     Compiling: {},
     Compiled: {},
@@ -51,12 +52,14 @@ func newBootstrapCodegen3State(
     ModuleRoot: moduleRoot,
     ManifestPath: manifestPath,
     EmitRoot: emitRoot,
-    CacheEnabled: codegen3CacheEnabled(),
+    CacheEnabled: cacheEnabled,
     CacheRoot: codegen3CacheRootPath(),
-    CompilerID: codegen3CompilerID(),
-    GoInputsDigest: codegen3GoInputsDigest(moduleRoot),
+    CompilerID: if cacheEnabled => codegen3CompilerID() else "",
+    GoInputsDigest: if cacheEnabled => codegen3GoInputsDigest(moduleRoot) else "",
     PackageKeys: {},
     PackageInputKeys: {},
+    ValidatedSummaries: {},
+    SourceDigests: {},
     StageCounters: {},
   }
 end
@@ -819,10 +822,15 @@ func bootstrapCodegen3Files(
       else
         ()
       end
-      if strings.HasSuffix(name, "_test") then
-        Ok(bootstrapCodegen3TestNames(files))
-      else
-        Ok(files)
+      switch codegen2.AppendDynamicDispatchFileDiagnostic(files, inputs.Inputs, info.MyGoPackages)
+        case Err(diagnostic) => Err(ast2.RenderDiagnostic(diagnostic))
+        case Ok(withDynamic) then
+          if strings.HasSuffix(name, "_test") then
+            Ok(bootstrapCodegen3TestNames(withDynamic))
+          else
+            Ok(withDynamic)
+          end
+        end
       end
     end
   end
@@ -1024,7 +1032,9 @@ func bootstrapFinishCodegen3Package(
                             key,
                             outputDir,
                             files,
-                            bootstrapCodegen3PackageInputs(inputs, externalTest)
+                            bootstrapCodegen3PackageInputs(inputs, externalTest),
+                            inputs,
+                            infoWithPackages
                           )
                         end
                       end
@@ -1189,7 +1199,7 @@ func bootstrapAssignPackageKey(
   if state.CacheEnabled then
     let allInputs = bootstrapCodegen3PackageInputs(inputs, externalTest)
     let key = codegen3PackageKey(
-      dir,
+      codegen3StateSourceDigest(dir, state),
       state.OptimizationLevel,
       state.NoPrelude,
       state.CompilerID,
@@ -1278,7 +1288,10 @@ func bootstrapCachePreludeKey(
 end
 
 func bootstrapCacheKeyOf(depDir: String, state: BootstrapState) -> String
-  state.PackageKeys.Get(depDir).UnwrapOr(codegen3SourceDigest(depDir))
+  switch state.PackageKeys.Get(depDir)
+    case Some(key) => key
+    case None => codegen3StateSourceDigest(depDir, state)
+  end
 end
 
 func bootstrapFinishCodegen3CacheHit(
@@ -1312,7 +1325,7 @@ func bootstrapTryCodegen3EarlyHit(
   state: BootstrapState,
   codegen: Bool
 ) -> Option[Result[Slice[String], Error]]
-  if !state.Codegen3 || !state.CacheEnabled then
+  if !codegen || !state.Codegen3 || !state.CacheEnabled || state.ParseCache.IsSome() || state.OverlayStamps.Len() > 0 then
     None
   else
     let fingerprint = codegen3SourceFingerprint(dir, state)
@@ -1326,28 +1339,17 @@ func bootstrapTryCodegen3EarlyHit(
           if entry == "" then
             None
           else
-            switch codegen3MetadataInputs(state, entry, summary.PackagePath)
-              case Err(_) => None
-              case Ok(inputs) then
-                state.SourcesCache.Set(dir, inputs)
-                state.TypedSourcesCache.Set(dir, inputs.Sources)
-                state.PackageKeys.Set(dir, summary.PackageKey)
-                state.PackageInputKeys.Set(dir, summary.InputKey)
-                bootstrapRecordStage(state, "cache-early-hit")
-                if codegen then
-                  Some(bootstrapFinishCodegen3CacheHit(
-                    dir,
-                    state,
-                    entry,
-                    [],
-                    [],
-                    bootstrapTimingStart()
-                  ))
-                else
-                  Some(Ok([]))
-                end
-              end
-            end
+            state.PackageKeys.Set(dir, summary.PackageKey)
+            state.PackageInputKeys.Set(dir, summary.InputKey)
+            bootstrapRecordStage(state, "cache-early-hit")
+            Some(bootstrapFinishCodegen3CacheHit(
+              dir,
+              state,
+              entry,
+              [],
+              [],
+              bootstrapTimingStart()
+            ))
           end
         end
       end
@@ -1404,11 +1406,20 @@ func bootstrapPublishCodegen3Package(
   key: String,
   outputDir: String,
   files: Slice[String],
-  inputs: BootstrapInputs
+  inputs: BootstrapInputs,
+  mainInputs: BootstrapInputs,
+  info: typeinference2.PackageInfo
 ) -> Result[Slice[String], Error]
   let manifestDir = bootstrapCodegen3ManifestDir(state, dir, outputDir)
   if !state.CacheEnabled || key == "" then
-    codegen3ManifestAppend(state.ManifestPath, manifestDir, files).Map(
+    # `files` includes dependency and prelude outputs. Recording those under
+    # this package's source directory would overlay foreign generated files
+    # into the package when the cache is disabled.
+    let localFiles = files.Filter(func(file: String) -> Bool
+      let relative = filepath.Rel(outputDir, file).UnwrapOr("..")
+      relative != ".." && !strings.HasPrefix(filepath.ToSlash(relative), "../")
+    end)
+    codegen3ManifestAppend(state.ManifestPath, manifestDir, localFiles).Map(
       func(ignored: ()) -> Slice[String] files end
     )
   else
@@ -1424,10 +1435,21 @@ func bootstrapPublishCodegen3Package(
               case Ok(_) then
                 switch codegen3PackageSummaryFor(dir, state, inputs, key)
                   case Err(err) => Err(err)
-                  case Ok(summary) =>
-                    codegen3WritePackageSummary(summary).Map(
-                      func(ignored: ()) -> Slice[String] files end
-                    )
+                  case Ok(summary) then
+                    switch codegen3WritePackageSummary(summary)
+                      case Err(err) => Err(err)
+                      case Ok(_) then
+                        let sources = bootstrapTypedSourcesWithImports(mainInputs.Sources, info.TypedDeclSources)
+                        let kind = if mainInputs.Inputs.Fold(false, func(found: Bool, input: codegen2.SourceFileInput) -> Bool found || input.Path.HasSuffix("_test.mygo") end) then "internal-test" else "main" end
+                        let typed = codegen3TypedSummaryFromInfo(dir, summary.PackagePath, kind, summary.InputKey, bootstrapMetadataJSON(outputDir), sources, info)
+                        switch typed
+                          case None => ()
+                          case Some(value) => let _ = codegen3WriteTypedSummary(summary.PackageKey, value)
+                        end
+                        Ok(files)
+                      end
+                    end
+                  end
                 end
             end
           end

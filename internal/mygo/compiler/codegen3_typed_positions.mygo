@@ -1,0 +1,165 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+
+func codegen3RewriteCachedPos(
+  root: String,
+  relative: Bool,
+  pos: ast2.SourcePos,
+  invalid: Map[String, Bool]
+) -> ast2.SourcePos
+  let result = if relative then
+    codegen3RelativeSourcePos(root, pos)
+  else
+    codegen3RebaseSourcePos(root, pos)
+  end
+  switch result
+    case Some(value) => value
+    case None then
+      invalid.Set("invalid", true)
+      pos
+    end
+  end
+end
+
+func codegen3RewriteCachedSpan(
+  root: String,
+  relative: Bool,
+  span: ast2.SourceSpan,
+  invalid: Map[String, Bool]
+) -> ast2.SourceSpan
+  ast2.SourceSpan {
+    Start: codegen3RewriteCachedPos(root, relative, span.Start, invalid),
+    End: codegen3RewriteCachedPos(root, relative, span.End, invalid),
+  }
+end
+
+func codegen3RewriteCachedSig(
+  root: String,
+  relative: Bool,
+  sig: Codegen3CachedFuncSig,
+  invalid: Map[String, Bool]
+) -> Codegen3CachedFuncSig
+  var result = sig
+  result.Pos = codegen3RewriteCachedPos(root, relative, sig.Pos, invalid)
+  result.RetSpan = codegen3RewriteCachedSpan(root, relative, sig.RetSpan, invalid)
+  result.Params = sig.Params.Map(func(param: Codegen3CachedParam) -> Codegen3CachedParam
+    var item = param
+    item.TypeSpan = codegen3RewriteCachedSpan(root, relative, param.TypeSpan, invalid)
+    item.Span = codegen3RewriteCachedSpan(root, relative, param.Span, invalid)
+    item
+  end)
+  result.Using = sig.Using.Map(func(constraint: Codegen3CachedConstraint) -> Codegen3CachedConstraint
+    var item = constraint
+    item.Span = codegen3RewriteCachedSpan(root, relative, constraint.Span, invalid)
+    item
+  end)
+  result
+end
+
+func codegen3RewriteCachedDecl(
+  root: String,
+  relative: Bool,
+  decl: Codegen3CachedDecl,
+  invalid: Map[String, Bool]
+) -> Codegen3CachedDecl
+  var result = decl
+  result.Fields = decl.Fields.Map(func(field: Codegen3CachedField) -> Codegen3CachedField
+    var item = field
+    item.TypeSpan = codegen3RewriteCachedSpan(root, relative, field.TypeSpan, invalid)
+    item.Span = codegen3RewriteCachedSpan(root, relative, field.Span, invalid)
+    item
+  end)
+  result.Variants = decl.Variants.Map(func(variant: Codegen3CachedVariant) -> Codegen3CachedVariant
+    var item = variant
+    item.Span = codegen3RewriteCachedSpan(root, relative, variant.Span, invalid)
+    item.FieldSpans = variant.FieldSpans.Map(func(span: ast2.SourceSpan) -> ast2.SourceSpan
+      codegen3RewriteCachedSpan(root, relative, span, invalid)
+    end)
+    item
+  end)
+  result.Binding = decl.Binding.Map(func(binding: Codegen3CachedBinding) -> Codegen3CachedBinding
+    var item = binding
+    item.Span = codegen3RewriteCachedSpan(root, relative, binding.Span, invalid)
+    item.TypeSpan = binding.TypeSpan.Map(func(span: ast2.SourceSpan) -> ast2.SourceSpan
+      codegen3RewriteCachedSpan(root, relative, span, invalid)
+    end)
+    item
+  end)
+  result.Signatures = decl.Signatures.Map(func(sig: Codegen3CachedFuncSig) -> Codegen3CachedFuncSig
+    codegen3RewriteCachedSig(root, relative, sig, invalid)
+  end)
+  result.Implementation = decl.Implementation.Map(func(implementation: Codegen3CachedImpl) -> Codegen3CachedImpl
+    var item = implementation
+    item.Methods = implementation.Methods.Map(func(method: Codegen3CachedImplMethod) -> Codegen3CachedImplMethod
+      Codegen3CachedImplMethod {
+        Pos: codegen3RewriteCachedPos(root, relative, method.Pos, invalid),
+        Sig: codegen3RewriteCachedSig(root, relative, method.Sig, invalid),
+      }
+    end)
+    item
+  end)
+  result
+end
+
+func codegen3RewriteCachedPredicate(
+  root: String,
+  relative: Bool,
+  predicate: Codegen3CachedPredicate,
+  invalid: Map[String, Bool]
+) -> Codegen3CachedPredicate
+  var result = predicate
+  result.Origin = predicate.Origin.Map(func(span: ast2.SourceSpan) -> ast2.SourceSpan
+    codegen3RewriteCachedSpan(root, relative, span, invalid)
+  end)
+  result.Definition = predicate.Definition.Map(func(span: ast2.SourceSpan) -> ast2.SourceSpan
+    codegen3RewriteCachedSpan(root, relative, span, invalid)
+  end)
+  result
+end
+
+# Build a new value; an invalid nested location never mutates the caller's record.
+func codegen3RelocateTypedSummary(
+  root: String,
+  relative: Bool,
+  summary: Codegen3TypedSummary
+) -> Option[Codegen3TypedSummary]
+  let invalid: Map[String, Bool] = {}
+  var result = summary
+  result.Sources = summary.Sources.Map(func(source: Codegen3TypedSource) -> Codegen3TypedSource
+    var item = source
+    let path = if relative then
+      codegen3RelativeSourceName(root, source.Path)
+    else
+      codegen3RebaseSourceName(root, source.Path)
+    end
+    switch path
+      case Some(name) => item.Path = name
+      case None => invalid.Set("invalid", true)
+    end
+    item.Positions = source.Positions.Map(func(pos: ast2.SourcePos) -> ast2.SourcePos
+      codegen3RewriteCachedPos(root, relative, pos, invalid)
+    end)
+    item.Decls = source.Decls.Map(func(decl: Codegen3CachedDecl) -> Codegen3CachedDecl
+      codegen3RewriteCachedDecl(root, relative, decl, invalid)
+    end)
+    item
+  end)
+  result.Env = summary.Env.Map(func(entry: Codegen3CachedEnvEntry) -> Codegen3CachedEnvEntry
+    var item = entry
+    var scheme = entry.Scheme
+    scheme.Predicates = entry.Scheme.Predicates.Map(func(predicate: Codegen3CachedPredicate) -> Codegen3CachedPredicate
+      codegen3RewriteCachedPredicate(root, relative, predicate, invalid)
+    end)
+    item.Scheme = scheme
+    item
+  end)
+  result.Instances = summary.Instances.Map(func(instance: Codegen3CachedInstance) -> Codegen3CachedInstance
+    var item = instance
+    item.Predicates = instance.Predicates.Map(func(predicate: Codegen3CachedPredicate) -> Codegen3CachedPredicate
+      codegen3RewriteCachedPredicate(root, relative, predicate, invalid)
+    end)
+    item
+  end)
+  if invalid.Get("invalid").UnwrapOr(false) => None else Some(result)
+end

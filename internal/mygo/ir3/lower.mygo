@@ -168,7 +168,7 @@ func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Dec
         Kind: DeclKind.ImplDecl(ImplData {
           TypeParams: typeParams,
           Target: target,
-          TargetType: lowerTypeExpr(target),
+          TargetType: implDynamicTargetType(target, iface),
           Interface: iface,
           ReceiverName: implReceiverName(target),
           Methods: lowerImplMethods(methods, typeParams, 0, []),
@@ -178,6 +178,18 @@ func lowerDecl(decl: ast2.Decl, pos: ast2.SourcePos, path: String) -> Option[Dec
       })
     end
     case ImportDecl(_, _) => None
+  end
+end
+
+func implDynamicTargetType(target: ast2.TypeExpr, iface: Option[ast2.TypeExpr]) -> ast2.MonoType
+  switch iface
+    case Some(NamedType(_, args)) then
+      switch args.Get(0)
+        case Some(value) => lowerTypeExpr(value)
+        case None => lowerTypeExpr(target)
+      end
+    end
+    case _ => lowerTypeExpr(target)
   end
 end
 

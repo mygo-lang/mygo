@@ -705,3 +705,73 @@ go test -run '^$' -bench 'BenchmarkCodegen3FileScaling|BenchmarkCodegen3SingleFi
   -benchmem -benchtime=5x ./internal/mygo/codegen3
 go test -run 'TestCodegen3Summary' -count=1 ./internal/mygo/compiler
 ```
+
+### Warm-cache regression fix (2026-11-09)
+
+The original regression was reproduced in isolated trees. Commit `cc5d576e9f`
+added verified output reuse but could exceed 150 s on a warm self-host build;
+the immediately preceding source built the same workload in 27.9 s warm. The
+final implementation moves importer data into a separate, checksummed typed
+summary instead of reconstructing executable-looking AST stubs from API
+metadata. A verified dependency summary can seed inference directly, including
+prelude declarations, inherent methods, instances and dynamic metadata.
+Generated-output hits remain separate and do not populate declaration caches.
+
+Measurements used Linux/amd64, Go 1.27.1, the same warmed `GOCACHE`, separate
+MyGO caches, and `GOFLAGS=-buildvcs=false` in the source-only baseline copy.
+The baseline binary was
+`f10e5e134a8f713667aeb77553b276a61f9e6acfcd0d3846a9112f9a4be10b2d`.
+The final binary was
+`6e4feb3041ccd2335307dbb8a2eb13885a5dcde5da061082e91bb198ccc85520`,
+built from HEAD `11a40dd6889d661d438ae031b4d2b9fb5722357c` plus the working
+tree changes in this change. The build workload was:
+
+```sh
+env MYGO_CACHE=<cache> GOCACHE=<shared-warm-gocache> GOFLAGS=-buildvcs=false \
+  mygo --codegen3 --opt-level=2 build -o <output> ./cmd/mygo
+```
+
+| Self-host build | Baseline | Final |
+| --- | ---: | ---: |
+| cold MyGO cache | 110.396 s | 115.206 s |
+| unchanged warm, run 1 | 29.230 s | 0.262 s |
+| unchanged warm, run 2 | 33.520 s | 0.289 s |
+| cache disabled | failed after 101.539 s | 112.386 s |
+
+The warm test workload used `--codegen3 --opt-level=2 test
+-run=^TestPipelineInvalidFlags$ -count=1 .` from `cmd/mygo`: 29.888 s for the
+baseline and 0.913 s for the final compiler. The baseline cache-disabled build
+failed with generated files from unrelated packages overlaid into one source
+directory. The final compiler records only files below each package's own
+output directory, and the same workload succeeds. The baseline failure explains
+why no valid baseline cache-disabled timing is reported.
+
+Work counters show where the warm gain comes from. A changed importer with an
+unchanged dependency records one parse, one FFI pass and one inference pass for
+the importer itself; the dependency is supplied by `typed-dependency-hit` and
+is neither parsed nor inferred again. `metadata-read` is zero on the typed path
+and nonzero when caching is disabled. A prelude summary hit records
+`typed-prelude-hit` without `prelude-source-load`. Shared dependency graphs
+validate each successful summary at most once per build identity. Typed summary
+records are versioned (`version: 2`), so older, missing, corrupt and
+incompatible entries miss without manual cleanup.
+
+Correctness checks accompanying these timings:
+
+- `go test ./internal/mygo/compiler -run '^TestCodegen3'`;
+- `go test ./internal/mygo/{codegen2,codegen3,ir3}` and the full
+  `typeinference2`/`codegen2` suites;
+- LSP overlay tests `TestDependencyEditInvalidatesDependent`,
+  `TestImportedAliasNavigationAndOverlay` and `TestRealProtocolSemanticSession`;
+- `go test ./cmd/mygo -run '^TestPipeline(IR3Scaffolding|CLITestCommand)$'`
+  (132.140 s including Go compilation and test execution);
+- cache-off fixtures for transitive imports, test input identity, source
+  positions, diagnostics, typeclass instances, generic methods and dynamic
+  boxing, comparing output with the cache-disabled path.
+
+These are local measurements, not a fleet-wide guarantee. Cold, warm and
+disabled runs use one or two samples per compiler; `GOCACHE` was already warm,
+and elapsed time includes Go toolchain work. The final warm result is mostly
+manifest staging and Go's no-op build, which is the intended outcome for an
+unchanged self-host build. The baseline cache-disabled result is unavailable
+because that revision contains the output-mapping defect fixed here.

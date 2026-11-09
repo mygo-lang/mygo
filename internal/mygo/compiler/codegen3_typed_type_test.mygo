@@ -1,0 +1,155 @@
+package compiler
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import typeinference2 "github.com/mygo-lang/mygo/internal/mygo/typeinference2"
+import json "go:encoding/json"
+import testing "go:testing"
+
+func TestCodegen3CachedMonoTypeRoundTrip(t: Ref[testing.T]) -> ()
+  let types = [
+    ast2.MonoType.TArray(Ref.new(ast2.MonoType.TVar(1)), 3),
+    ast2.MonoType.TKVar(2),
+    ast2.MonoType.TParam(3),
+    ast2.MonoType.TApp(Ref.new(ast2.MonoType.TCon("Option")), [ast2.MonoType.TVar(4)]),
+    ast2.MonoType.TFunc([ast2.MonoType.TCon("Int")], Ref.new(ast2.MonoType.TUnit)),
+    ast2.MonoType.TVariadic([ast2.MonoType.TCon("String")], Ref.new(ast2.MonoType.TVar(5))),
+    ast2.MonoType.TTuple([ast2.MonoType.TUnit, ast2.MonoType.TQualifiedName("example.invalid/pkg", Ref.new(ast2.MonoType.TCon("Item")))]),
+  ]
+  let _ = types.Fold(0, func(count: Int, typ: ast2.MonoType) -> Int
+    let encoded = codegen3EncodeMonoType(typ)
+    switch json.Marshal(encoded)
+      case Err(err) => t.Fatalf("marshal cached type: %v", err)
+      case Ok(data) then
+        var decoded = Codegen3CachedType { Kind: "", Name: "", Number: 0, Children: [] }
+        switch json.Unmarshal(data, Ref.new(decoded))
+          case Err(err) => t.Fatalf("unmarshal cached type: %v", err)
+          case Ok(_) then
+            switch codegen3DecodeMonoType(decoded)
+              case None => t.Fatal("cached type was rejected")
+              case Some(actual) then
+                if !ast2.MonoEqual(typ, actual) then
+                  t.Fatal("cached type changed during round trip")
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    count + 1
+  end)
+  if codegen3DecodeMonoType(codegen3CachedType("array", "", 1, [])).IsSome() ||
+    codegen3DecodeMonoType(codegen3CachedType("unknown", "", 0, [])).IsSome() then
+    t.Fatal("malformed cached type was accepted")
+  end
+end
+
+func TestCodegen3CachedSchemeRoundTrip(t: Ref[testing.T]) -> ()
+  let pos = ast2.SourcePos { SourceName: "pkg/input.mygo", Line: 7, Column: 4 }
+  let span = ast2.SourceSpan { Start: pos, End: pos }
+  let scheme = typeinference2.Scheme {
+    Bound: [2],
+    Predicates: [typeinference2.Predicate {
+      ClassName: "Show",
+      Args: [ast2.MonoType.TVar(2)],
+      Origin: Some(span),
+      Definition: None,
+    }],
+    Body: ast2.MonoType.TFunc([ast2.MonoType.TVar(2)], Ref.new(ast2.MonoType.TCon("String"))),
+  }
+  let encoded = codegen3EncodeScheme(scheme)
+  var stored = Codegen3CachedScheme {
+    Bound: [],
+    Predicates: [],
+    Body: Codegen3CachedType { Kind: "", Name: "", Number: 0, Children: [] },
+  }
+  switch json.Marshal(encoded)
+    case Err(err) => t.Fatalf("marshal cached scheme: %v", err)
+    case Ok(data) then
+      switch json.Unmarshal(data, Ref.new(stored))
+        case Err(err) => t.Fatalf("unmarshal cached scheme: %v", err)
+        case Ok(_) => ()
+      end
+    end
+  end
+  switch codegen3DecodeScheme(stored)
+    case None => t.Fatal("cached scheme was rejected")
+    case Some(decoded) then
+      if !ast2.MonoEqual(scheme.Body, decoded.Body) || decoded.Bound.Len() != 1 || decoded.Predicates.Len() != 1 then
+        t.Fatal("cached scheme changed during round trip")
+      end
+      switch decoded.Predicates.Get(0)
+        case None => t.Fatal("cached predicate missing")
+        case Some(predicate) then
+          switch predicate.Origin
+            case None => t.Fatal("cached predicate origin missing")
+            case Some(origin) then
+              if origin.Start.SourceName != "pkg/input.mygo" || origin.Start.Line != 7 || origin.Start.Column != 4 then
+                t.Fatal("cached predicate source position changed")
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  let entry = typeinference2.EnvEntry { Name: "pkg.Value", Scheme: scheme }
+  switch codegen3DecodeEnvEntry(codegen3EncodeEnvEntry(entry))
+    case None => t.Fatal("cached environment entry was rejected")
+    case Some(decoded) then
+      if decoded.Name != entry.Name || !ast2.MonoEqual(decoded.Scheme.Body, entry.Scheme.Body) then
+        t.Fatal("cached environment entry changed during round trip")
+      end
+    end
+  end
+end
+
+func TestCodegen3CachedSourceTypesRoundTrip(t: Ref[testing.T]) -> ()
+  let types = [
+    ast2.TypeExpr.ArrayType(Ref.new(ast2.TypeExpr.NamedType("Int", [])), 4),
+    ast2.TypeExpr.NamedType("dep.Box", [ast2.TypeExpr.NamedType("String", [])]),
+    ast2.TypeExpr.FuncType([ast2.TypeExpr.UnitType], Ref.new(ast2.TypeExpr.NamedType("Int", []))),
+    ast2.TypeExpr.TupleType([ast2.TypeExpr.UnitType, ast2.TypeExpr.NamedType("Int", [])]),
+    ast2.TypeExpr.InlineGo(Ref.new(ast2.TypeExpr.NamedType("Int", [])), "int"),
+  ]
+  let _ = types.Fold(0, func(count: Int, typ: ast2.TypeExpr) -> Int
+    let encoded = codegen3EncodeTypeExpr(typ)
+    switch codegen3DecodeTypeExpr(encoded)
+      case None => t.Fatal("cached source type was rejected")
+      case Some(decoded) then
+        if !ast2.TypesEqual(typ, decoded) then
+          t.Fatal("cached source type changed during round trip")
+        end
+      end
+    end
+    count + 1
+  end)
+  if codegen3DecodeTypeExpr(codegen3CachedType("syntax-array", "", -1, [])).IsSome() then
+    t.Fatal("malformed cached source type was accepted")
+  end
+end
+
+func TestCodegen3CachedFieldsAndInstancesRoundTrip(t: Ref[testing.T]) -> ()
+  let field = typeinference2.FieldEntry { TypeName: "Item", FieldName: "Value", Type: ast2.MonoType.TVar(2) }
+  switch codegen3DecodeFieldEntry(codegen3EncodeFieldEntry(field))
+    case None => t.Fatal("cached field was rejected")
+    case Some(decoded) then
+      if decoded.TypeName != field.TypeName || decoded.FieldName != field.FieldName || !ast2.MonoEqual(decoded.Type, field.Type) then
+        t.Fatal("cached field changed during round trip")
+      end
+    end
+  end
+  let instance = typeinference2.Instance {
+    ClassName: "Show",
+    Type: ast2.MonoType.TCon("Item"),
+    Predicates: [typeinference2.Predicate { ClassName: "Eq", Args: [ast2.MonoType.TVar(2)], Origin: None, Definition: None }],
+  }
+  switch codegen3DecodeInstance(codegen3EncodeInstance(instance))
+    case None => t.Fatal("cached instance was rejected")
+    case Some(decoded) then
+      if decoded.ClassName != instance.ClassName || decoded.Predicates.Len() != 1 || !ast2.MonoEqual(decoded.Type, instance.Type) then
+        t.Fatal("cached instance changed during round trip")
+      end
+    end
+  end
+end

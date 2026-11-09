@@ -2,6 +2,12 @@
 
 See the proposal and delta specs. The current dependency-declaration path can call uncached compilation directly; a sampled warm build was inside Go FFI loading through that path. The summary walker has a recursion-stack guard but no completed-node memo: the recorded compiler dependency graph has 202 visits for 13 summaries, including 101 visits to prelude. This establishes repeated work, not its share of the measured timeout. Module-wide Go input scanning also runs during state creation with caching disabled. Cache metadata is staged and read through generated Go files; its cost has not yet been isolated.
 
+Probing the actual staged self-host cache exposed a more direct cause: most metadata reconstruction attempts failed because named prelude types such as `Option` carry the prelude package path but have no explicit import alias. The failure silently selected the full frontend fallback. Metadata reconstructs import declarations as well as exported signatures; on-demand reuse must retain those imports for transitive collection, while metadata without sufficient declarations or valid integrity checks must fall back. A dependency already on the active compilation stack must not be treated as a successful cached cycle.
+
+Allowing those reconstructed declarations into inference exposed a second problem. `ExportedDecls` gives functions and values unit-valued placeholders and does not reconstruct inherent `impl` blocks. The prelude path supplies these declarations as external source to inference, which tries to infer the placeholders. The self-host test reported `List.Cons` missing and a return-type error in `ListToSlice`. The metadata reader also leaves declaration positions empty. Reconstructing an AST successfully therefore does not establish that it is safe for inference.
+
+`bootstrapDependencySourcesDiagnostic` needs typed declarations and their imports for transitive package collection. Prelude declarations take a separate external-source inference path. The package key includes both main and external-test inputs and their imports, but the existing importer metadata is built from the main package and does not establish completeness for either inference path. The compiler must therefore check the requested input kind as well as the cache entry. Active compilation and summary traversal both need cycle checks before a cached declaration is accepted.
+
 The main `bootstrap-codegen3` spec's old ban on metadata contradicts the existing generator and the verified-reuse performance specification. This change replaces that prohibition with a verified metadata contract; it does not introduce a new public metadata ABI.
 
 ## Goals / Non-Goals
@@ -18,7 +24,14 @@ The main `bootstrap-codegen3` spec's old ban on metadata contradicts the existin
 
 ### Unify dependency reuse with a correctness-preserving fallback
 
-Trace every route that supplies importer declarations, including `bootstrapDependencySourcesDiagnostic`, early hits, test inputs and transitive imports. Route codegen3's on-demand request through the same verified summary and entry checks as other hits, and retain a cycle-guarded source compilation path for missing, invalid or incomplete metadata. Ensure reused declarations include everything downstream inference and code generation need, including import relationships, dynamic metadata and source locations. Do not blindly replace the uncached call with the top-level compile function: confirm its state, recursion, codegen and error contracts first. Preserve overlay-aware source loading for non-codegen3/editor paths and bypass persistent disk summaries whenever they cannot represent active overlays.
+Trace every route that supplies importer declarations, including `bootstrapDependencySourcesDiagnostic`, prelude loading, test inputs and transitive imports. Keep two distinct cache uses:
+
+1. An output-only hit verifies the package summary, dependency inputs and generated entry before reusing generated files. It does not install reconstructed declaration stubs into the source or typed-declaration caches. If a later importer needs declarations, it must use the declaration path below.
+2. A declaration hit requires a versioned, complete typed dependency summary. It supplies importer-facing information to an explicitly pretyped inference path. The compiler must not pass reconstructed placeholder bodies to the source inference path. An unchanged dependency with a complete verified summary can be reused without parsing, FFI collection or inference; otherwise use cycle-guarded compilation from current source.
+
+The existing package metadata describes an exported API and dynamic dispatch. It does not prove that a package can be seeded as a typed dependency. Add a separate versioned cache representation and completeness marker for that purpose, or extend the cache summary with an equivalent distinct typed section. Capture the data actually consumed by inference and code generation: package identity and imports; inferred binding and function types; type declarations; inherent methods, typeclass instances, constraints and method signatures; dynamic-dispatch information; and source paths and declaration positions where diagnostics need them. Preserve the distinction between main, internal test and external test inputs. Record source paths relative to the package or module and rebase them on load so cache sharing does not embed checkout-specific absolute paths.
+
+Seed the inference environment, method and instance lookup, and downstream code generation from the verified typed representation. Keep prelude on the same contract, including implicit prelude names, instead of treating metadata stubs as its source. If the current inference API cannot consume a pretyped dependency, extend the API and its callers explicitly. Do not infer unit-valued stub bodies or treat the presence of an API metadata file as a completeness marker. Compare inferred results and diagnostics with source compilation before enabling a declaration hit for a package or input kind. Preserve overlay-aware loading and bypass persistent disk summaries when active overlays are not represented.
 
 ### Memoize verified graph results and fingerprints within a build
 
@@ -36,12 +49,13 @@ Use isolated source trees and output/cache roots, same Go version and warmed Go 
 
 ## Risks / Trade-offs
 
-- [Incomplete metadata or lost imports] → Exercise transitive and changed-importer behavior against cache-off; fall back when completeness cannot be demonstrated.
-- [Memoized stale or partial validation] → Scope by build and complete input identity, mark success only after all checks, and test corruption, concurrent cache publication and source/input changes.
-- [Regression to saved disk declarations in LSP] → Keep overlay-aware loading and run existing unsaved dependency signature and close-buffer regressions.
-- [Metadata handling or Go toolchain dominates after fixing traversal] → Attribute stage costs, profile if needed, and fix material remaining causes before claiming the performance goal.
-- [Different revisions and host noise distort baseline] → Record exact trees and tools, alternate repeated runs and separate source changes, cache preparation and Go toolchain time.
+- Incomplete typed summaries can seed the wrong declarations. Compare prelude, methods, instances, generics and changed importers against cache-off; fall back when completeness cannot be demonstrated.
+- Cached declarations can lose source locations. Round-trip package-relative locations and verify diagnostic paths, lines and columns in another checkout.
+- Validation memoization can retain stale or partial results. Scope it by build and complete input identity, mark success only after all checks, and test corruption, concurrent cache publication and input changes.
+- LSP analysis can regress to saved disk declarations. Keep overlay-aware loading and run the unsaved dependency signature and close-buffer regressions.
+- Metadata handling or the Go toolchain may dominate after traversal is fixed. Attribute stage costs, profile if needed, and fix material remaining causes before claiming the performance goal.
+- Different revisions and host noise can distort the baseline. Record exact trees and tools, alternate repeated runs and separate source changes, cache preparation and Go toolchain time.
 
 ## Migration Plan
 
-Keep compatible cache entries when their verification remains sufficient; bump the relevant format when semantics or stored information change, making older entries safe misses. Roll back by reverting the implementation and ignoring incompatible cache entries; do not require manual cache deletion for correctness. Update the conflicting main-spec requirement through the normal OpenSpec sync after implementation and verification.
+Give the typed dependency representation its own version and completeness marker. Older entries without a complete typed summary remain misses for declaration reuse; their generated output may be reused only if its own checks pass. Roll back by reverting the implementation and ignoring incompatible entries. Correctness must not require manual cache deletion. Update the conflicting main-spec requirement through the normal OpenSpec sync after implementation and verification.
