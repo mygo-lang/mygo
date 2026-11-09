@@ -8,9 +8,12 @@ construction/matching syntax, FFI adapters, and cache integration.
 ## Per-file emission
 
 Each IR `Decl.Path` maps back to its originating `.mygo` file. `GenerateFiles`
-groups declarations by that path and emits one `zz_<source>.gen.go` (or
-`zz_<source>.gen_test.go` for a test source) per input. Shared package helpers are
-emitted once, in deterministic source order.
+builds one package emission context that groups declarations and imports by
+source path, records interface-helper ownership, and collects local helper names
+once. It then emits one `zz_<source>.gen.go` (or `zz_<source>.gen_test.go` for a
+test source) per input without rescanning all package declarations. The
+single-file `GenerateFile` entry point builds the same context for one file and
+produces byte-identical output.
 
 Generated line directives use package-relative source names and the original
 source position. The absolute module checkout path never enters generated text,
@@ -87,7 +90,9 @@ tail calls remain ordinary calls.
 An ordinary build/test does not write generated Go beside the source tree. The
 pipeline stores generated files in the content-addressed user cache and runs
 `go build`/`go test` with a temporary overlay. `--codegen3-emit=<dir>` is the
-explicit debug materialization path. No metadata artifact is generated.
+explicit debug materialization path. Cache entries include a metadata-only
+`zz_mygo_metadata.gen.go` so verified warm hits can recover importer-facing
+declarations without parsing; it emits no declarations into the built package.
 
 The cache key covers compiler identity, representation/adapter versions,
 optimization level, normalized sources, dependency keys, and relevant Go module/

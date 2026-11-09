@@ -109,39 +109,45 @@ func pkgIsPrelude(pkg: ir3.Package) -> Bool
 end
 
 func GenerateFiles(pkg: ir3.Package) -> Result[Map[String, String], String]
-  setCanonicalPackages(pkg)
   refreshGenericReturnFunctions(pkg.Decls)
-  let paths = declarationPaths(pkg.Decls, 0, [])
-  generateFilesAt(pkg, paths, 0, {})
+  let context = newPackageEmissionContext(pkg)
+  generateFilesWithContext(context, 0, {})
 end
 
 func GenerateFile(pkg: ir3.Package, path: String) -> Result[String, String]
-  setCanonicalPackages(pkg)
   refreshGenericReturnFunctions(pkg.Decls)
+  generateFileWithContext(newPackageEmissionContext(pkg), path)
+end
+
+func generateFileWithContext(
+  context: PackageEmissionContext,
+  path: String
+) -> Result[String, String]
+  setCanonicalPackages(context.Package)
   # Qualified types must use the alias this file imports, not the path base.
-  ir3.SetGoImportAliases(fileImportAliases(pkg.Imports, path, 0, {}))
-  let decls = filterDeclsByPath(pkg.Decls, path, 0, [])
-  switch lowerGoDecls(decls, pkg.TypeShapes, pkg.InterfaceTypes, 0, [])
+  ir3.SetGoImportAliases(context.AliasesByPath.Get(path).UnwrapOr({}))
+  let decls = context.DeclarationsByPath.Get(path).UnwrapOr([])
+  switch lowerGoDecls(decls, context.Package.TypeShapes, context.Package.InterfaceTypes, 0, [])
     case Ok(baseDecls) then
-      let goDecls = appendInterfaceWrappers(pkg.InterfaceTypes, pkg.Decls, path, 0, baseDecls)
+      let goDecls = appendInterfaceWrappersForContext(context, path, baseDecls)
       let aliases = goast.ReferencedImportAliases(goDecls)
       # Types inferred from another package's signature can make the generated
       # file reference an alias it never imported itself; the package-wide
       # import list supplies it.
       let imports = appendInferredImports(
-        pkg.Imports,
+        context.Package.Imports,
         aliases,
         0,
-        goImportsForFile(pkg.Imports, path, aliases, 0, [])
+        goImportsForFileWithContext(context, path, aliases, 0, [])
       )
       # The prelude defines Option/Result and their constructors itself. Its own
       # references to those names are local, so the implicit prelude import must
       # never be added there (it would be a self-import cycle).
-      let withPrelude = if pkgIsPrelude(pkg) then
+      let withPrelude = if pkgIsPrelude(context.Package) then
         imports
       elsif goast.NeedsPreludeImportWithHelpers(
         goDecls,
-        localHelperNames(pkg.Decls, 0, [])
+        context.HelperNames
       ) then
         imports.Append(goast.Import {
           Alias: ".",
@@ -150,7 +156,7 @@ func GenerateFile(pkg: ir3.Package, path: String) -> Result[String, String]
       else
         imports
       end
-      switch goast.RenderWithLegacy(pkg.Name, withPrelude, goDecls, [])
+      switch goast.RenderWithLegacy(context.Package.Name, withPrelude, goDecls, [])
         case Ok(source) then
           let origins = goast.NewOrigins()
           if goDecls.Len() == decls.Len() then
@@ -173,6 +179,29 @@ func GenerateFile(pkg: ir3.Package, path: String) -> Result[String, String]
       end
     end
     case Err(message) => Err(message)
+  end
+end
+
+func generateFilesWithContext(
+  context: PackageEmissionContext,
+  index: Int,
+  out: Map[String, String]
+) -> Result[Map[String, String], String]
+  if index >= context.Paths.Len() then
+    Ok(out)
+  else
+    switch context.Paths.Get(index)
+      case Some(path) then
+        switch generateFileWithContext(context, path)
+          case Ok(source) then
+            out.Set(generatedName(path), source)
+            generateFilesWithContext(context, index + 1, out)
+          end
+          case Err(message) => Err(path + ": " + message)
+        end
+      end
+      case None => generateFilesWithContext(context, index + 1, out)
+    end
   end
 end
 
@@ -263,6 +292,39 @@ func goImportsForFile(
         end
       end
       case None => goImportsForFile(imports, path, aliases, index + 1, out)
+    end
+  end
+end
+
+func goImportsForFileWithContext(
+  context: PackageEmissionContext,
+  path: String,
+  aliases: Slice[String],
+  index: Int,
+  out: Slice[goast.Import]
+) -> Slice[goast.Import]
+  let imports = context.ImportsByPath.Get(path).UnwrapOr([])
+  if index >= imports.Len() then
+    out
+  else
+    switch imports.Get(index)
+      case Some(item) then
+        if keepImport(item, aliases) then
+          goImportsForFileWithContext(
+            context,
+            path,
+            aliases,
+            index + 1,
+            out.Append(goast.Import {
+              Alias: importAliasFor(item),
+              Path: importPathFor(item),
+            })
+          )
+        else
+          goImportsForFileWithContext(context, path, aliases, index + 1, out)
+        end
+      end
+      case None => goImportsForFileWithContext(context, path, aliases, index + 1, out)
     end
   end
 end
@@ -528,6 +590,23 @@ func appendInterfaceWrappers(
       case None => appendInterfaceWrappers(interfaces, decls, path, index + 1, out)
     end
   end
+end
+
+func appendInterfaceWrappersForContext(
+  context: PackageEmissionContext,
+  path: String,
+  out: Slice[goast.Decl]
+) -> Slice[goast.Decl]
+  context.Package.InterfaceTypes.Fold(
+    out,
+    func(acc: Slice[goast.Decl], name: String) -> Slice[goast.Decl]
+      if context.InterfaceOwners.Get(name).UnwrapOr("") == path then
+        appendGoDecls(acc, goast.DynamicValueDecls("MygoDynamic" + name), 0)
+      else
+        acc
+      end
+    end
+  )
 end
 
 # `InterfaceTypes` only ever lists source interface names, and a package cannot

@@ -67,7 +67,7 @@ import . "github.com/mygo-lang/mygo/prelude"
 								__mygo_expr_7 = "build"
  /*line zz_codegen3_build.gen.go:68:1*/							}
  /*line codegen3_build.mygo:55:15*/							command := __mygo_expr_7
-							argv := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{command, "-overlay", overlay, "-modfile=" + __mygo_match___mygo_expr_4.F0}, args)
+							argv := MygoIT9ISequenceFN14SliceISequenceGN1TEGN5SliceGN1TEN1TEM6Concat([]string{command, "-buildvcs=false", "-overlay", overlay, "-modfile=" + __mygo_match___mygo_expr_4.F0}, args)
  /*line codegen3_build.mygo:57:15*/							__mygo_expr_8 := codegen3RunGo(root, argv, "")
 							var __mygo_expr_9 Result[struct{}, error]
 							if __mygo_match___mygo_expr_10, ok := __mygo_expr_8.(Result__Err[struct{}, error]); ok {

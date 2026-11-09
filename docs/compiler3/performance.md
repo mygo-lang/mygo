@@ -649,3 +649,59 @@ The cache regression tests cover changed-source invalidation, generated-file
 exclusion, Go build-environment invalidation, corrupt-entry recovery,
 cross-module sharing, locking, disabled cache, and generated-output placement.
 The compiler package tests pass through the codegen3 backend.
+
+### Verified warm early hits and indexed emission
+
+The previous warm path still parsed every package and collected Go FFI
+signatures before consulting the output cache. The compiler now publishes a
+checksummed summary keyed by a cheap source fingerprint. The summary records
+recursive dependency input keys and the generated-output key, while importer
+metadata is stored in the cache entry. A verified hit therefore skips parsing,
+FFI collection, inference, IR lowering, optimization, and code generation.
+Summary validation covers MyGO sources, transitive imports, external tests,
+module/toolchain options, hand-written Go inputs, and local replacements.
+
+Per-file emission now builds declaration/import indexes and package helper data
+once. `GenerateFile` remains as the single-file compatibility entry point and
+produces byte-identical output.
+
+Measurements were taken on Linux/amd64 with Go 1.27.1 and
+`--codegen3 --no-prelude --opt-level=2`. The workload had eight MyGO files with
+one function each. End-to-end time is dominated by the Go toolchain and is
+reported to one decimal millisecond; the MyGO stage is the meaningful
+work-avoidance signal.
+
+| Warm measurement | Before | After |
+| --- | ---: | ---: |
+| total MyGO stage | 1.263 ms | 0.223 ms |
+| parser2 | 0.643 ms | absent |
+| Go FFI collection | 0.002 ms | absent |
+| type inference | warm cache hit | absent |
+| end-to-end (3 samples) | 0.067–0.071 s | 0.069–0.071 s |
+
+The all-cache-disabled O0/O1/O2 IR benchmark was also sampled before the change:
+O0 workloads took 0.917–1.002 s and 10.95–10.98M allocations; O2 workloads took
+0.863–0.880 s. The identical post-change command reported O0 workloads at
+0.783–0.829 s and O2 workloads at 0.785–0.798 s, with 10.96–10.99M allocations.
+The cold work remains in the same range because the new path adds summary
+validation and metadata generation rather than changing the optimizer.
+
+Controlled emission scaling used 128 declarations, five iterations, and only
+the source-file count varied:
+
+| Files | Indexed emission | Single-file-entry rebuild |
+| ---: | ---: | ---: |
+| 1 | 2.76 ms / 22,361 allocs | 2.65 ms / 22,358 allocs |
+| 4 | 2.70 ms / 22,999 allocs | 2.85 ms / 23,517 allocs |
+| 16 | 2.64 ms / 24,959 allocs | 3.37 ms / 28,089 allocs |
+| 64 | 3.00 ms / 30,392 allocs | 5.67 ms / 44,950 allocs |
+
+The 64-file case reduced emission time by about 47% and allocations by about
+32% relative to rebuilding the package context for each file. These are local
+single-run trend measurements, not guarantees. Recreate them with:
+
+```sh
+go test -run '^$' -bench 'BenchmarkCodegen3FileScaling|BenchmarkCodegen3SingleFileEntry' \
+  -benchmem -benchtime=5x ./internal/mygo/codegen3
+go test -run 'TestCodegen3Summary' -count=1 ./internal/mygo/compiler
+```

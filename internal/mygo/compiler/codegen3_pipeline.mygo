@@ -56,6 +56,8 @@ func newBootstrapCodegen3State(
     CompilerID: codegen3CompilerID(),
     GoInputsDigest: codegen3GoInputsDigest(moduleRoot),
     PackageKeys: {},
+    PackageInputKeys: {},
+    StageCounters: {},
   }
 end
 
@@ -826,6 +828,28 @@ func bootstrapCodegen3Files(
   end
 end
 
+# Cache entries include the same importer-facing metadata as codegen2. The
+# generated Go file contains no declarations, but lets a verified early hit
+# rebuild exported declarations without parsing the package again.
+func bootstrapCodegen3MetadataSource(
+  dir: String,
+  inputs: BootstrapInputs,
+  info: typeinference2.PackageInfo,
+  generated: Map[String, String]
+) -> Result[String, Error]
+  let typedSources = bootstrapTypedSourcesWithImports(
+    inputs.Sources,
+    bootstrapCodegen3SourceUnits(inputs, info)
+  )
+  codegen2.PackageMetadataSource(
+    bootstrapCodegen3PackageName(inputs),
+    bootstrapCodegen3ImportPath(dir),
+    generated,
+    bootstrapCodegen3Decls(typedSources, 0, []),
+    info.MyGoPackages
+  )
+end
+
 # Generated names always end in .gen.go; an external test package must use
 # .gen_test.go or `go test` will ignore it.
 func bootstrapCodegen3TestNames(generated: Map[String, String]) -> Map[String, String]
@@ -953,42 +977,57 @@ func bootstrapFinishCodegen3Package(
           Err(bootstrapContext("generate " + dir, outputDir, bootstrapCodegen3Error(message)))
         end
         case Ok(generated) then
-          bootstrapTimingLog(state, "codegen3", dir, started)
-          switch bootstrapWriteCodegen3Output(outputDir, generated)
+          switch bootstrapCodegen3MetadataSource(
+            dir,
+            inputs,
+            infoWithPackages,
+            generated
+          )
             case Err(err) =>
               state.Compiling.Delete(dir)
-              Err(bootstrapContext("write", dir, err))
-            case Ok(paths) then
-              # A file left over from an earlier run (for example one whose source
-              # was renamed) would still be compiled by the overlay, so drop
-              # generated files this pass did not produce.
-              switch bootstrapCleanupOutputs(outputDir, paths)
-                case Err(err) then
+              Err(err)
+            case Ok(metadataSource) then
+              var generatedWithMetadata = generated
+              generatedWithMetadata.Set("zz_mygo_metadata.gen.go", metadataSource)
+              bootstrapTimingLog(state, "codegen3", dir, started)
+              switch bootstrapWriteCodegen3Output(outputDir, generatedWithMetadata)
+                case Err(err) =>
                   state.Compiling.Delete(dir)
-                  Err(bootstrapContext("cleanup " + dir, outputDir, err))
-                end
-                case Ok(_) then
-                  switch bootstrapFinishCodegen3ExternalTest(
-                    dir,
-                    state,
-                    externalTest,
-                    infoWithPackages,
-                    packagesRef,
-                    preludeWritten,
-                    dependencyFiles,
-                    paths,
-                    started,
-                    totalStarted
-                  )
-                    case Err(err) => Err(err)
-                    case Ok(files) then
-                      bootstrapPublishCodegen3Package(
+                  Err(bootstrapContext("write", dir, err))
+                case Ok(paths) then
+                  # A file left over from an earlier run (for example one whose source
+                  # was renamed) would still be compiled by the overlay, so drop
+                  # generated files this pass did not produce.
+                  switch bootstrapCleanupOutputs(outputDir, paths)
+                    case Err(err) then
+                      state.Compiling.Delete(dir)
+                      Err(bootstrapContext("cleanup " + dir, outputDir, err))
+                    end
+                    case Ok(_) then
+                      switch bootstrapFinishCodegen3ExternalTest(
                         dir,
                         state,
-                        key,
-                        outputDir,
-                        files
+                        externalTest,
+                        infoWithPackages,
+                        packagesRef,
+                        preludeWritten,
+                        dependencyFiles,
+                        paths,
+                        started,
+                        totalStarted
                       )
+                        case Err(err) => Err(err)
+                        case Ok(files) then
+                          bootstrapPublishCodegen3Package(
+                            dir,
+                            state,
+                            key,
+                            outputDir,
+                            files,
+                            bootstrapCodegen3PackageInputs(inputs, externalTest)
+                          )
+                        end
+                      end
                     end
                   end
                 end
@@ -1141,21 +1180,48 @@ end
 
 # Record the content-addressed key for one package. Dependencies have already
 # finished, so their keys feed this package's Merkle key.
-func bootstrapAssignPackageKey(dir: String, state: BootstrapState, inputs: BootstrapInputs) -> ()
+func bootstrapAssignPackageKey(
+  dir: String,
+  state: BootstrapState,
+  inputs: BootstrapInputs,
+  externalTest: BootstrapInputs
+) -> ()
   if state.CacheEnabled then
+    let allInputs = bootstrapCodegen3PackageInputs(inputs, externalTest)
     let key = codegen3PackageKey(
       dir,
       state.OptimizationLevel,
       state.NoPrelude,
       state.CompilerID,
       state.GoInputsDigest,
-      bootstrapCacheDependencyKeys(dir, state, inputs)
+      bootstrapCacheDependencyKeys(dir, state, allInputs)
     )
     state.PackageKeys.Set(dir, key)
+    switch codegen3SummaryDependencies(dir, state, allInputs)
+      case Ok(dependencies) =>
+        state.PackageInputKeys.Set(
+          dir,
+          codegen3PackageInputKey(
+            codegen3SourceFingerprint(dir, state),
+            dependencies
+          )
+        )
+      case Err(_) => ()
+    end
     ()
   else
     ()
   end
+end
+
+func bootstrapCodegen3PackageInputs(
+  inputs: BootstrapInputs,
+  externalTest: BootstrapInputs
+) -> BootstrapInputs
+  BootstrapInputs {
+    Inputs: inputs.Inputs.Concat(externalTest.Inputs),
+    Sources: inputs.Sources.Concat(externalTest.Sources),
+  }
 end
 
 func bootstrapCacheDependencyKeys(
@@ -1237,6 +1303,58 @@ func bootstrapFinishCodegen3CacheHit(
   end
 end
 
+# A source fingerprint identifies the summary without parsing imports. The
+# summary carries dependency input keys and the output key; every dependency
+# summary is validated recursively before the metadata and generated output are
+# trusted. Any absent or stale record falls back to normal compilation.
+func bootstrapTryCodegen3EarlyHit(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Option[Result[Slice[String], Error]]
+  if !state.Codegen3 || !state.CacheEnabled then
+    None
+  else
+    let fingerprint = codegen3SourceFingerprint(dir, state)
+    switch codegen3ReadPackageSummary(fingerprint)
+      case None => None
+      case Some(summary) then
+        if !codegen3ValidatePackageSummary(dir, state, summary, {}) then
+          None
+        else
+          let entry = codegen3CacheLookup(summary.PackageKey)
+          if entry == "" then
+            None
+          else
+            switch codegen3MetadataInputs(state, entry, summary.PackagePath)
+              case Err(_) => None
+              case Ok(inputs) then
+                state.SourcesCache.Set(dir, inputs)
+                state.TypedSourcesCache.Set(dir, inputs.Sources)
+                state.PackageKeys.Set(dir, summary.PackageKey)
+                state.PackageInputKeys.Set(dir, summary.InputKey)
+                bootstrapRecordStage(state, "cache-early-hit")
+                if codegen then
+                  Some(bootstrapFinishCodegen3CacheHit(
+                    dir,
+                    state,
+                    entry,
+                    [],
+                    [],
+                    bootstrapTimingStart()
+                  ))
+                else
+                  Some(Ok([]))
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 func bootstrapFinishCodegen3CacheHitAtOutput(
   dir: String,
   state: BootstrapState,
@@ -1285,7 +1403,8 @@ func bootstrapPublishCodegen3Package(
   state: BootstrapState,
   key: String,
   outputDir: String,
-  files: Slice[String]
+  files: Slice[String],
+  inputs: BootstrapInputs
 ) -> Result[Slice[String], Error]
   let manifestDir = bootstrapCodegen3ManifestDir(state, dir, outputDir)
   if !state.CacheEnabled || key == "" then
@@ -1302,13 +1421,21 @@ func bootstrapPublishCodegen3Package(
           case Ok(_) then
             switch bootstrapEmitCacheEntry(state, entry, dir)
               case Err(err) => Err(err)
-              case Ok(_) => Ok(files)
+              case Ok(_) then
+                switch codegen3PackageSummaryFor(dir, state, inputs, key)
+                  case Err(err) => Err(err)
+                  case Ok(summary) =>
+                    codegen3WritePackageSummary(summary).Map(
+                      func(ignored: ()) -> Slice[String] files end
+                    )
+                end
             end
           end
         end
       end
     end
   end
+end
 end
 
 func bootstrapEmitCacheEntry(state: BootstrapState, entry: String, dir: String) -> Result[(), Error]

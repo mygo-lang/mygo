@@ -97,6 +97,34 @@ func TestCodegen3GoInputsDigestTracksBuildEnvironment(t: Ref[testing.T]) -> ()
   end
 end
 
+func TestCodegen3GoInputsDigestTracksLocalGoSources(t: Ref[testing.T]) -> ()
+  let dir = t.TempDir()
+  writeFixture(t, dir, "go.mod", "module example.invalid/go-inputs\n\ngo 1.24\n")
+  writeFixture(t, dir, "helper.go", "package fixture\n\nconst Value = 1\n")
+  let first = codegen3GoInputsDigest(dir)
+  writeFixture(t, dir, "helper.go", "package fixture\n\nconst Value = 2\n")
+  if codegen3GoInputsDigest(dir) == first then
+    t.Fatal("hand-written Go change did not invalidate Go inputs")
+  end
+end
+
+func TestCodegen3GoInputsDigestTracksLocalReplacement(t: Ref[testing.T]) -> ()
+  let root = t.TempDir()
+  let replacement = filepath.Join(root, "replacement")
+  switch os.MkdirAll(replacement, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("replacement directory: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, root, "go.mod", "module example.invalid/main\n\ngo 1.24\n\nreplace example.invalid/dep => ./replacement\n")
+  writeFixture(t, replacement, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+  writeFixture(t, replacement, "dep.go", "package dep\n\nconst Value = 1\n")
+  let first = codegen3GoInputsDigest(root)
+  writeFixture(t, replacement, "dep.go", "package dep\n\nconst Value = 2\n")
+  if codegen3GoInputsDigest(root) == first then
+    t.Fatal("local replacement change did not invalidate Go inputs")
+  end
+end
+
 func codegen3ExpectedFailure(t: Ref[testing.T], dir: String) -> String
   switch buildCodegen3(dir, codegen3CacheTestOptions(), false, [])
     case Err(err) => err.Error()
@@ -143,6 +171,222 @@ func TestCodegen3CacheSharedAcrossModules(t: Ref[testing.T]) -> ()
   let entries = codegen3CacheEntryDirs(cache)
   if entries.Len() != 1 then
     t.Fatalf("cache entries = %d, want 1 shared entry", entries.Len())
+  end
+end
+
+func codegen3EarlyHitState(t: Ref[testing.T], moduleRoot: String) -> BootstrapState
+  let buildRoot = t.TempDir()
+  newBootstrapCodegen3State(
+    2,
+    moduleRoot,
+    buildRoot,
+    true,
+    filepath.Join(buildRoot, "manifest.jsonl"),
+    ""
+  )
+end
+
+func codegen3StageCount(state: BootstrapState, stage: String) -> Int
+  state.StageCounters.Get(stage).UnwrapOr(0)
+end
+
+func TestCodegen3SummaryEarlyHitSkipsParseAndFFI(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let moduleRoot = t.TempDir()
+  writeFixture(t, moduleRoot, "go.mod", "module example.invalid/early-hit\n\ngo 1.24\n")
+  writeFixture(
+    t,
+    moduleRoot,
+    "add.mygo",
+    "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n"
+  )
+  let cold = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, cold)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(cold, "parse") == 0 || codegen3StageCount(cold, "ffi") == 0 then
+    t.Fatalf("cold build did not record front-end work: parse=%d ffi=%d",
+      codegen3StageCount(cold, "parse"),
+      codegen3StageCount(cold, "ffi")
+    )
+  end
+  let probe = codegen3EarlyHitState(t, moduleRoot)
+  let fingerprint = codegen3SourceFingerprint(moduleRoot, probe)
+  switch codegen3ReadPackageSummary(fingerprint)
+    case None => t.Fatal("summary record was not readable: " + fingerprint)
+    case Some(summary) then
+      if !codegen3ValidatePackageSummary(moduleRoot, probe, summary, {}) then
+        t.Fatal("summary record did not validate: " + fingerprint)
+      end
+      let entry = codegen3CacheLookup(summary.PackageKey)
+      if entry == "" then
+        t.Fatal("summary output entry is missing: " + summary.PackageKey)
+      end
+      switch codegen3MetadataInputs(probe, entry, summary.PackagePath)
+        case Err(err) => t.Fatalf("summary metadata could not be loaded: %v", err)
+        case Ok(_) => ()
+      end
+    end
+  end
+  let warm = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, warm)
+    case Err(err) => t.Fatalf("warm build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "cache-early-hit") != 1 then
+    t.Fatalf("warm build early hits = %d, want 1", codegen3StageCount(warm, "cache-early-hit"))
+  end
+  if codegen3StageCount(warm, "parse") != 0 || codegen3StageCount(warm, "ffi") != 0 then
+    t.Fatalf("warm build repeated front-end work: parse=%d ffi=%d",
+      codegen3StageCount(warm, "parse"),
+      codegen3StageCount(warm, "ffi")
+    )
+  end
+end
+
+func TestCodegen3SummaryInvalidFallsBackToParsing(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let moduleRoot = t.TempDir()
+  writeFixture(t, moduleRoot, "go.mod", "module example.invalid/bad-summary\n\ngo 1.24\n")
+  writeFixture(
+    t,
+    moduleRoot,
+    "value.mygo",
+    "package fixture\n\nfunc Value() -> Int\n  1\nend\n"
+  )
+  let cold = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, cold)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  let fingerprint = codegen3SourceFingerprint(moduleRoot, cold)
+  let summaryPath = codegen3SummaryPath(fingerprint)
+  switch os.WriteFile(
+    summaryPath,
+    "truncated" as Slice[Byte],
+    0o644 as os.FileMode
+  )
+    case Err(err) => t.Fatalf("corrupt summary: %v", err)
+    case Ok(_) => ()
+  end
+  let warm = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, warm)
+    case Err(err) => t.Fatalf("fallback build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "cache-early-hit") != 0 then
+    t.Fatalf("corrupt summary produced an early hit")
+  end
+  if codegen3StageCount(warm, "parse") == 0 then
+    t.Fatalf("corrupt summary skipped parsing instead of falling back")
+  end
+  let repaired = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, repaired)
+    case Err(err) => t.Fatalf("repaired-summary build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(repaired, "cache-early-hit") != 1 then
+    t.Fatalf("fallback did not repair the summary")
+  end
+end
+
+func TestCodegen3SummaryTracksCheckoutIndependentSource(t: Ref[testing.T]) -> ()
+  let cache = t.TempDir()
+  t.Setenv("MYGO_CACHE", cache)
+  let first = t.TempDir()
+  let second = t.TempDir()
+  let source = "package fixture\n\nfunc Value() -> Int\n  1\nend\n"
+  writeFixture(t, first, "go.mod", "module example.invalid/summary-checkout\n\ngo 1.24\n")
+  writeFixture(t, second, "go.mod", "module example.invalid/summary-checkout\n\ngo 1.24\n")
+  writeFixture(t, first, "value.mygo", source)
+  writeFixture(t, second, "value.mygo", source)
+  let firstState = codegen3EarlyHitState(t, first)
+  switch syncBootstrapMyGO3WithState(first, firstState)
+    case Err(err) => t.Fatalf("first checkout: %v", err)
+    case Ok(_) => ()
+  end
+  let secondState = codegen3EarlyHitState(t, second)
+  switch syncBootstrapMyGO3WithState(second, secondState)
+    case Err(err) => t.Fatalf("second checkout: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(secondState, "cache-early-hit") != 1 then
+    t.Fatalf("second checkout did not reuse the summary")
+  end
+  let summaryRoot = filepath.Join(cache, "summaries")
+  switch filepath.Glob(filepath.Join(summaryRoot, "*", "*.json"))
+    case Err(err) => t.Fatalf("list summaries: %v", err)
+    case Ok(paths) then
+      if paths.Len() != 1 then
+        t.Fatalf("summary files = %d, want one path-independent summary", paths.Len())
+      end
+    end
+  end
+end
+
+func TestCodegen3SummaryInvalidatesChangedSource(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let moduleRoot = t.TempDir()
+  writeFixture(t, moduleRoot, "go.mod", "module example.invalid/changed-summary\n\ngo 1.24\n")
+  writeFixture(t, moduleRoot, "value.mygo", "package fixture\n\nfunc Value() -> Int\n  1\nend\n")
+  let cold = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, cold)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, moduleRoot, "value.mygo", "package fixture\n\nfunc Value() -> Int\n  2\nend\n")
+  let warm = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, warm)
+    case Err(err) => t.Fatalf("changed-source build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "cache-early-hit") != 0 then
+    t.Fatalf("changed source reused a stale summary")
+  end
+  if codegen3StageCount(warm, "parse") == 0 || codegen3StageCount(warm, "ffi") == 0 then
+    t.Fatalf("changed source did not re-enter the front end")
+  end
+end
+
+func TestCodegen3SummaryInvalidatesChangedDependency(t: Ref[testing.T]) -> ()
+  t.Setenv("MYGO_CACHE", t.TempDir())
+  let moduleRoot = t.TempDir()
+  writeFixture(t, moduleRoot, "go.mod", "module example.invalid/summary-deps\n\ngo 1.24\n")
+  let lib = filepath.Join(moduleRoot, "lib")
+  let app = filepath.Join(moduleRoot, "app")
+  switch os.MkdirAll(lib, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("lib directory: %v", err)
+    case Ok(_) => ()
+  end
+  switch os.MkdirAll(app, 0o755 as os.FileMode)
+    case Err(err) => t.Fatalf("app directory: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
+  writeFixture(
+    t,
+    app,
+    "main.mygo",
+    "package app\n\nimport lib \"example.invalid/summary-deps/lib\"\n\nfunc Value() -> Int\n  lib.Add(1, 2)\nend\n"
+  )
+  let cold = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, cold)
+    case Err(err) => t.Fatalf("cold build: %v", err)
+    case Ok(_) => ()
+  end
+  writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b + 1\nend\n")
+  let warm = codegen3EarlyHitState(t, moduleRoot)
+  switch syncBootstrapMyGO3WithState(moduleRoot, warm)
+    case Err(err) => t.Fatalf("changed-dependency build: %v", err)
+    case Ok(_) => ()
+  end
+  if codegen3StageCount(warm, "cache-early-hit") != 0 then
+    t.Fatalf("changed dependency reused a stale summary")
+  end
+  if codegen3StageCount(warm, "parse") < 2 then
+    t.Fatalf("changed dependency did not invalidate its importer: parse=%d", codegen3StageCount(warm, "parse"))
   end
 end
 

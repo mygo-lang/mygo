@@ -1,0 +1,142 @@
+package compiler
+# Go inputs that are not themselves MyGO packages.
+#
+# The package source digest covers files in the package being built. Go FFI can
+# also type-check hand-written Go elsewhere in the module, and local `replace`
+# targets are mutable. Those trees therefore contribute stable path-relative
+# digests to the build-environment key.
+
+import os "go:os"
+import filepath "go:path/filepath"
+import strings "go:strings"
+
+func codegen3ModuleGoInputDigest(moduleRoot: String) -> String
+  let parts = codegen3CollectGoInputParts(moduleRoot, moduleRoot, "", 0, [])
+  codegen3HashParts(parts)
+end
+
+func codegen3LocalReplacementDigest(moduleRoot: String) -> String
+  let content = bootstrapReadFileString(filepath.Join(moduleRoot, "go.mod")).UnwrapOr("")
+  let replacements = bootstrapGoModReplaceEntries(content)
+  let parts = codegen3CollectReplacementParts(moduleRoot, replacements, 0, [])
+  codegen3HashParts(parts)
+end
+
+func codegen3CollectReplacementParts(
+  moduleRoot: String,
+  replacements: Slice[BootstrapGoModReplace],
+  index: Int,
+  out: Slice[String]
+) -> Slice[String]
+  if index >= replacements.Len() then
+    out
+  else
+    switch replacements.Get(index)
+      case Some(replacement) then
+        switch bootstrapResolveReplaceRoot(moduleRoot, replacement.Path)
+          case Some(root) then
+            codegen3CollectReplacementParts(
+              moduleRoot,
+              replacements,
+              index + 1,
+              codegen3CollectGoInputParts(
+                root,
+                root,
+                root,
+                index,
+                out
+              )
+            )
+          end
+          case None => codegen3CollectReplacementParts(moduleRoot, replacements, index + 1, out)
+        end
+      end
+      case None => codegen3CollectReplacementParts(moduleRoot, replacements, index + 1, out)
+    end
+  end
+end
+
+# `root` is the tree being hashed; `dir` is the current directory. For local
+# replacements every file carries its replacement ordinal so two identical
+# prefixes cannot hide a changed target identity.
+func codegen3CollectGoInputParts(
+  root: String,
+  dir: String,
+  replacementRoot: String,
+  replacementIndex: Int,
+  out: Slice[String]
+) -> Slice[String]
+  switch os.ReadDir(dir)
+    case Err(_) => out
+    case Ok(entries) then
+      entries.Fold(
+        out,
+        func(acc: Slice[String], entry: os.DirEntry) -> Slice[String]
+          let path = filepath.Join(dir, entry.Name())
+          if entry.IsDir() then
+            if codegen3SkipGoInputDir(entry.Name()) then
+              acc
+            else
+              codegen3CollectGoInputParts(root, path, replacementRoot, replacementIndex, acc)
+            end
+          else
+            codegen3AppendGoInputPart(root, replacementRoot, replacementIndex, path, entry.Name(), acc)
+          end
+        end
+      )
+    end
+  end
+end
+
+func codegen3AppendGoInputPart(
+  root: String,
+  replacementRoot: String,
+  replacementIndex: Int,
+  path: String,
+  name: String,
+  out: Slice[String]
+) -> Slice[String]
+  if !codegen3RelevantGoInputFile(name, replacementRoot != "") then
+    out
+  else
+    switch os.ReadFile(path)
+      case Err(_) => out
+      case Ok(data) then
+        let relative = filepath.Rel(root, path).UnwrapOr(name)
+        let label = if replacementRoot == "" then
+          filepath.ToSlash(relative)
+        else
+          "replace-" + replacementIndex.ToString() + "/" + filepath.ToSlash(relative)
+        end
+        out.Append(label + "|" + data.Len().ToString() + "|" + (data as String))
+      end
+    end
+  end
+end
+
+func codegen3SkipGoInputDir(name: String) -> Bool
+  name == ".git" || name == "build" || name == "node_modules" || strings.HasPrefix(name, "build-")
+end
+
+func codegen3GoInputFile(name: String) -> Bool
+  codegen3RelevantGoInputFile(name, false)
+end
+
+func codegen3RelevantGoInputFile(name: String, includeModuleFiles: Bool) -> Bool
+  if strings.HasSuffix(name, ".gen.go") || strings.HasSuffix(name, ".gen_test.go") then
+    false
+  elsif includeModuleFiles && codegen3ModuleInputName(name) then
+    true
+  else
+    [".go", ".s", ".S", ".c", ".h", ".cc", ".cpp", ".m", ".mm", ".f", ".F", ".for", ".f90"].Fold(
+      false,
+      func(found: Bool, suffix: String) -> Bool
+        found || strings.HasSuffix(name, suffix)
+      end
+    )
+  end
+end
+
+func codegen3ModuleInputName(name: String) -> Bool
+  name == "go.mod" || name == "go.sum" || strings.HasSuffix(name, ".mygo")
+end

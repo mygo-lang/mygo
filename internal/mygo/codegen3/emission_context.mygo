@@ -1,0 +1,87 @@
+package codegen3
+# Package-wide indexes shared by per-file emission.
+
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+
+struct PackageEmissionContext
+  Package: ir3.Package
+  Paths: Slice[String]
+  DeclarationsByPath: Map[String, Slice[ir3.Decl]]
+  ImportsByPath: Map[String, Slice[ir3.ImportSpec]]
+  AliasesByPath: Map[String, Map[String, String]]
+  HelperNames: Slice[String]
+  InterfaceOwners: Map[String, String]
+end
+
+func newPackageEmissionContext(pkg: ir3.Package) -> PackageEmissionContext
+  let paths = declarationPaths(pkg.Decls, 0, [])
+  let declarationPathsByName = pkg.Decls.Fold(
+    {} as Map[String, String],
+    func(acc: Map[String, String], decl: ir3.Decl) -> Map[String, String]
+      var next = acc
+      next.Set(decl.Name, decl.Path)
+      next
+    end
+  )
+  let declarationsByPath = pkg.Decls.Fold(
+    {} as Map[String, Slice[ir3.Decl]],
+    func(
+      acc: Map[String, Slice[ir3.Decl]],
+      decl: ir3.Decl
+    ) -> Map[String, Slice[ir3.Decl]]
+      var next = acc
+      next.Set(decl.Path, next.Get(decl.Path).UnwrapOr([]).Append(decl))
+      next
+    end
+  )
+  let importsByPath = pkg.Imports.Fold(
+    {} as Map[String, Slice[ir3.ImportSpec]],
+    func(
+      acc: Map[String, Slice[ir3.ImportSpec]],
+      item: ir3.ImportSpec
+    ) -> Map[String, Slice[ir3.ImportSpec]]
+      var next = acc
+      next.Set(item.File, next.Get(item.File).UnwrapOr([]).Append(item))
+      next
+    end
+  )
+  let aliasesByPath = pkg.Imports.Fold(
+    {} as Map[String, Map[String, String]],
+    func(
+      acc: Map[String, Map[String, String]],
+      item: ir3.ImportSpec
+    ) -> Map[String, Map[String, String]]
+      if item.Alias == "" || item.Alias == "." || item.Alias == "_" then
+        acc
+      else
+        var next = acc
+        let aliases = next.Get(item.File).UnwrapOr({})
+        aliases.Set(importPathFor(item), item.Alias)
+        next.Set(item.File, aliases)
+        next
+      end
+    end
+  )
+  let interfaceOwners = pkg.InterfaceTypes.Fold(
+    {} as Map[String, String],
+    func(acc: Map[String, String], name: String) -> Map[String, String]
+      let path = declarationPathsByName.Get(name).UnwrapOr("")
+      if path == "" then
+        acc
+      else
+        var next = acc
+        next.Set(name, path)
+        next
+      end
+    end
+  )
+  PackageEmissionContext {
+    Package: pkg,
+    Paths: paths,
+    DeclarationsByPath: declarationsByPath,
+    ImportsByPath: importsByPath,
+    AliasesByPath: aliasesByPath,
+    HelperNames: localHelperNames(pkg.Decls, 0, []),
+    InterfaceOwners: interfaceOwners,
+  }
+end

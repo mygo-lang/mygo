@@ -53,7 +53,7 @@ func codegen3BuildLocked(
             case Err(err) => Err(err)
             case Ok(_) then
               let command = if test => "test" else "build"
-              let argv = [command, "-overlay", overlay, "-modfile=" + modFile].Concat(args)
+              let argv = [command, "-buildvcs=false", "-overlay", overlay, "-modfile=" + modFile].Concat(args)
               switch codegen3RunGo(root, argv, "")
                 case Err(err) => Err(bootstrapContext("go " + command + " (codegen3 overlay)", root, err))
                 case Ok(_) => Ok(())

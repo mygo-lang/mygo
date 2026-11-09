@@ -1,0 +1,138 @@
+package codegen3
+
+import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
+import ir3 "github.com/mygo-lang/mygo/internal/mygo/ir3"
+import testing "go:testing"
+
+# Controlled declaration count, varying only source-file cardinality. Run:
+#
+#   go test -run '^$' -bench 'BenchmarkCodegen3FileScaling' -benchmem ./internal/mygo/codegen3
+
+func benchmarkEmissionPackage(files: Int, declarations: Int) -> ir3.Package
+  var decls: Slice[ir3.Decl] = []
+  let perFile = declarations / files
+  var fileIndex = 0
+  while fileIndex < files
+    let remainingFiles = files - fileIndex - 1
+    let wanted = if remainingFiles == 0 then
+      declarations - decls.Len()
+    else
+      perFile
+    end
+    let path = "file_" + fileIndex.ToString() + ".mygo"
+    var declarationIndex = 0
+    while declarationIndex < wanted
+      let name = "value_" + (decls.Len() + 1).ToString()
+      decls = decls.Append(cg3Function(
+        name,
+        [],
+        [ast2.MonoType.TUnit],
+        cg3TypedExpr(ir3.ExprKind.ConstExpr("()"), ast2.MonoType.TUnit),
+        path
+      ))
+      declarationIndex = declarationIndex + 1
+    end
+    fileIndex = fileIndex + 1
+  end
+  cg3Package(decls)
+end
+
+func benchmarkCodegen3FileScaling(
+  b: Ref[testing.B],
+  files: Int,
+  declarations: Int
+) -> ()
+  let pkg = benchmarkEmissionPackage(files, declarations)
+  b.ReportAllocs()
+  b.ResetTimer()
+  var index = 0
+  while index < b.N
+    switch GenerateFiles(pkg)
+      case Err(message) => b.Fatalf("GenerateFiles: %s", message)
+      case Ok(_) => ()
+    end
+    index = index + 1
+  end
+end
+
+func BenchmarkCodegen3FileScalingFiles1(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3FileScaling(b, 1, 128)
+end
+
+func BenchmarkCodegen3FileScalingFiles4(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3FileScaling(b, 4, 128)
+end
+
+func BenchmarkCodegen3FileScalingFiles16(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3FileScaling(b, 16, 128)
+end
+
+func BenchmarkCodegen3FileScalingFiles64(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3FileScaling(b, 64, 128)
+end
+
+func benchmarkCodegen3SingleFileEntry(
+  b: Ref[testing.B],
+  files: Int,
+  declarations: Int
+) -> ()
+  let pkg = benchmarkEmissionPackage(files, declarations)
+  let paths = declarationPaths(pkg.Decls, 0, [])
+  b.ReportAllocs()
+  b.ResetTimer()
+  var index = 0
+  while index < b.N
+    var pathIndex = 0
+    while pathIndex < paths.Len()
+      switch GenerateFile(pkg, paths.Get(pathIndex).UnwrapOr(""))
+        case Err(message) => b.Fatalf("GenerateFile: %s", message)
+        case Ok(_) => ()
+      end
+      pathIndex = pathIndex + 1
+    end
+    index = index + 1
+  end
+end
+
+func BenchmarkCodegen3SingleFileEntryFiles1(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3SingleFileEntry(b, 1, 128)
+end
+
+func BenchmarkCodegen3SingleFileEntryFiles4(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3SingleFileEntry(b, 4, 128)
+end
+
+func BenchmarkCodegen3SingleFileEntryFiles16(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3SingleFileEntry(b, 16, 128)
+end
+
+func BenchmarkCodegen3SingleFileEntryFiles64(b: Ref[testing.B]) -> ()
+  benchmarkCodegen3SingleFileEntry(b, 64, 128)
+end
+
+func TestCodegen3EmissionContextMatchesSingleFileEntry(t: Ref[testing.T]) -> ()
+  let pkg = benchmarkEmissionPackage(8, 64)
+  switch GenerateFiles(pkg)
+    case Err(message) => t.Fatalf("GenerateFiles: %s", message)
+    case Ok(files) then
+      let paths = ["file_0.mygo", "file_1.mygo", "file_2.mygo", "file_3.mygo", "file_4.mygo", "file_5.mygo", "file_6.mygo", "file_7.mygo"]
+      var index = 0
+      while index < paths.Len()
+        let path = paths.Get(index).UnwrapOr("")
+        switch GenerateFile(pkg, path)
+          case Err(message) => t.Fatalf("GenerateFile %s: %s", path, message)
+          case Ok(single) then
+            let bulk = files.Get(generatedName(path)).UnwrapOr("")
+            if bulk == "" then
+              t.Fatalf("multi-file output for %s is missing its declarations", path)
+            end
+            if bulk != single then
+              t.Fatalf("single-file entry differs for %s", path)
+            end
+        end
+        end
+        index = index + 1
+      end
+    end
+  end
+end

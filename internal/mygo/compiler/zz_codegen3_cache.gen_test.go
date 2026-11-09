@@ -147,299 +147,640 @@ import . "github.com/mygo-lang/mygo/prelude"
 		return
  /*line zz_codegen3_cache.gen_test.go:148:1*/	}
 }
- /*line codegen3_cache_test.mygo:100:1*/func codegen3ExpectedFailure(t *testing.T, dir string) string {
- /*line codegen3_cache_test.mygo:101:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:100:1*/func TestCodegen3GoInputsDigestTracksLocalGoSources(t *testing.T) {
+	dir := t.TempDir()
+ /*line codegen3_cache_test.mygo:102:3*/	writeFixture(t, dir, "go.mod", "module example.invalid/go-inputs\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:103:3*/	writeFixture(t, dir, "helper.go", "package fixture\n\nconst Value = 1\n")
+ /*line codegen3_cache_test.mygo:100:1*/	first := codegen3GoInputsDigest(dir)
+ /*line codegen3_cache_test.mygo:105:3*/	writeFixture(t, dir, "helper.go", "package fixture\n\nconst Value = 2\n")
+ /*line codegen3_cache_test.mygo:106:3*/	if codegen3GoInputsDigest(dir) == first {
+ /*line codegen3_cache_test.mygo:107:5*/		t.Fatal("hand-written Go change did not invalidate Go inputs")
+		return
+ /*line codegen3_cache_test.mygo:106:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:161:1*/	}
+}
+ /*line codegen3_cache_test.mygo:111:1*/func TestCodegen3GoInputsDigestTracksLocalReplacement(t *testing.T) {
+	root := t.TempDir()
+	replacement := filepath.Join(root, "replacement")
+ /*line codegen3_cache_test.mygo:114:3*/	var __mygo_expr_1 Result[struct{}, error]
+	__mygo_expr_0 := os.MkdirAll(replacement, os.FileMode(0o755))
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
+	} else {
+		__mygo_expr_1 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen_test.go:172:1*/		}{})
+	}
+ /*line codegen3_cache_test.mygo:114:3*/	__mygo_expr_2 := __mygo_expr_1
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache_test.mygo:115:22*/		t.Fatalf("replacement directory: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:114:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:180:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:118:3*/	writeFixture(t, root, "go.mod", "module example.invalid/main\n\ngo 1.24\n\nreplace example.invalid/dep => ./replacement\n")
+ /*line codegen3_cache_test.mygo:119:3*/	writeFixture(t, replacement, "go.mod", "module example.invalid/dep\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:120:3*/	writeFixture(t, replacement, "dep.go", "package dep\n\nconst Value = 1\n")
+ /*line codegen3_cache_test.mygo:111:1*/	first := codegen3GoInputsDigest(root)
+ /*line codegen3_cache_test.mygo:122:3*/	writeFixture(t, replacement, "dep.go", "package dep\n\nconst Value = 2\n")
+ /*line codegen3_cache_test.mygo:123:3*/	if codegen3GoInputsDigest(root) == first {
+ /*line codegen3_cache_test.mygo:124:5*/		t.Fatal("local replacement change did not invalidate Go inputs")
+		return
+ /*line codegen3_cache_test.mygo:123:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:192:1*/	}
+}
+ /*line codegen3_cache_test.mygo:128:1*/func codegen3ExpectedFailure(t *testing.T, dir string) string {
+ /*line codegen3_cache_test.mygo:129:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
 	var __mygo_expr_1 string
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
 		__mygo_expr_1 = __mygo_match___mygo_expr_2.F0.Error()
 	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:104:7*/			t.Fatal("expected the invalid package to fail inference")
- /*line codegen3_cache_test.mygo:101:3*/			__mygo_expr_1 = ""
+ /*line codegen3_cache_test.mygo:132:7*/			t.Fatal("expected the invalid package to fail inference")
+ /*line codegen3_cache_test.mygo:129:3*/			__mygo_expr_1 = ""
 		} else {
- /*line zz_codegen3_cache.gen_test.go:160:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:204:1*/		}
 	}
- /*line codegen3_cache_test.mygo:101:3*/	return __mygo_expr_1
- /*line zz_codegen3_cache.gen_test.go:163:1*/}
- /*line codegen3_cache_test.mygo:110:1*/func TestCodegen3CacheHitPathPreservesFailureDiagnostics(t *testing.T) {
+ /*line codegen3_cache_test.mygo:129:3*/	return __mygo_expr_1
+ /*line zz_codegen3_cache.gen_test.go:207:1*/}
+ /*line codegen3_cache_test.mygo:138:1*/func TestCodegen3CacheHitPathPreservesFailureDiagnostics(t *testing.T) {
 	cache := t.TempDir()
- /*line codegen3_cache_test.mygo:112:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_cache_test.mygo:110:1*/	dir := t.TempDir()
- /*line codegen3_cache_test.mygo:114:3*/	codegen3CacheTestSources(t, dir)
- /*line codegen3_cache_test.mygo:115:3*/	writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add() -> Int\n  \"wrong type\"\nend\n")
- /*line codegen3_cache_test.mygo:110:1*/	first := codegen3ExpectedFailure(t, dir)
+ /*line codegen3_cache_test.mygo:140:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:138:1*/	dir := t.TempDir()
+ /*line codegen3_cache_test.mygo:142:3*/	codegen3CacheTestSources(t, dir)
+ /*line codegen3_cache_test.mygo:143:3*/	writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add() -> Int\n  \"wrong type\"\nend\n")
+ /*line codegen3_cache_test.mygo:138:1*/	first := codegen3ExpectedFailure(t, dir)
 	second := codegen3ExpectedFailure(t, dir)
- /*line codegen3_cache_test.mygo:118:3*/	if first != second {
- /*line codegen3_cache_test.mygo:119:5*/		t.Fatalf("diagnostic changed on repeated failure:\nfirst: %s\nsecond: %s", first, second)
- /*line codegen3_cache_test.mygo:118:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:175:1*/	}
- /*line codegen3_cache_test.mygo:121:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 0 {
- /*line codegen3_cache_test.mygo:122:5*/		t.Fatal("failed inference published a cache entry")
+ /*line codegen3_cache_test.mygo:146:3*/	if first != second {
+ /*line codegen3_cache_test.mygo:147:5*/		t.Fatalf("diagnostic changed on repeated failure:\nfirst: %s\nsecond: %s", first, second)
+ /*line codegen3_cache_test.mygo:146:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:219:1*/	}
+ /*line codegen3_cache_test.mygo:149:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 0 {
+ /*line codegen3_cache_test.mygo:150:5*/		t.Fatal("failed inference published a cache entry")
 		return
- /*line codegen3_cache_test.mygo:121:3*/	} else {
+ /*line codegen3_cache_test.mygo:149:3*/	} else {
 		return
- /*line zz_codegen3_cache.gen_test.go:181:1*/	}
+ /*line zz_codegen3_cache.gen_test.go:225:1*/	}
 }
- /*line codegen3_cache_test.mygo:126:1*/func TestCodegen3CacheSharedAcrossModules(t *testing.T) {
+ /*line codegen3_cache_test.mygo:154:1*/func TestCodegen3CacheSharedAcrossModules(t *testing.T) {
 	cache := t.TempDir()
- /*line codegen3_cache_test.mygo:128:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_cache_test.mygo:126:1*/	first := t.TempDir()
+ /*line codegen3_cache_test.mygo:156:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:154:1*/	first := t.TempDir()
 	second := t.TempDir()
- /*line codegen3_cache_test.mygo:131:3*/	codegen3CacheTestSources(t, first)
- /*line codegen3_cache_test.mygo:132:3*/	codegen3CacheTestSources(t, second)
- /*line codegen3_cache_test.mygo:134:3*/	writeFixture(t, second, "go.mod", "module example.invalid/other-module\n\ngo 1.24\n")
- /*line codegen3_cache_test.mygo:135:3*/	__mygo_expr_0 := buildCodegen3(first, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:159:3*/	codegen3CacheTestSources(t, first)
+ /*line codegen3_cache_test.mygo:160:3*/	codegen3CacheTestSources(t, second)
+ /*line codegen3_cache_test.mygo:162:3*/	writeFixture(t, second, "go.mod", "module example.invalid/other-module\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:163:3*/	__mygo_expr_0 := buildCodegen3(first, codegen3CacheTestOptions(), false, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:136:22*/		t.Fatalf("first build: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:135:3*/	} else {
+ /*line codegen3_cache_test.mygo:164:22*/		t.Fatalf("first build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:163:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:197:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:241:1*/		}
 	}
- /*line codegen3_cache_test.mygo:139:3*/	__mygo_expr_2 := buildCodegen3(second, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:167:3*/	__mygo_expr_2 := buildCodegen3(second, codegen3CacheTestOptions(), false, []string{})
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:140:22*/		t.Fatalf("second build: %v", __mygo_match___mygo_expr_3.F0)
- /*line codegen3_cache_test.mygo:139:3*/	} else {
+ /*line codegen3_cache_test.mygo:168:22*/		t.Fatalf("second build: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:167:3*/	} else {
 		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:205:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:249:1*/		}
 	}
- /*line codegen3_cache_test.mygo:126:1*/	entries := codegen3CacheEntryDirs(cache)
- /*line codegen3_cache_test.mygo:144:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) != 1 {
- /*line codegen3_cache_test.mygo:145:5*/		t.Fatalf("cache entries = %d, want 1 shared entry", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries))
+ /*line codegen3_cache_test.mygo:154:1*/	entries := codegen3CacheEntryDirs(cache)
+ /*line codegen3_cache_test.mygo:172:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) != 1 {
+ /*line codegen3_cache_test.mygo:173:5*/		t.Fatalf("cache entries = %d, want 1 shared entry", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries))
 		return
- /*line codegen3_cache_test.mygo:144:3*/	} else {
+ /*line codegen3_cache_test.mygo:172:3*/	} else {
 		return
- /*line zz_codegen3_cache.gen_test.go:213:1*/	}
+ /*line zz_codegen3_cache.gen_test.go:257:1*/	}
 }
- /*line codegen3_cache_test.mygo:149:1*/func TestCodegen3CacheRecoversFromCorruptEntry(t *testing.T) {
+ /*line codegen3_cache_test.mygo:177:1*/func codegen3EarlyHitState(t *testing.T, moduleRoot string) BootstrapState {
+	buildRoot := t.TempDir()
+ /*line codegen3_cache_test.mygo:179:3*/	return newBootstrapCodegen3State(2, moduleRoot, buildRoot, true, filepath.Join(buildRoot, "manifest.jsonl"), "")
+ /*line zz_codegen3_cache.gen_test.go:262:1*/}
+ /*line codegen3_cache_test.mygo:189:1*/func codegen3StageCount(state BootstrapState, stage string) int {
+ /*line codegen3_cache_test.mygo:190:3*/	return MygoIN6OptionM8UnwrapOr(MygoIT11IAssignableFN3MapGN1KN1VEGN3MapGN1KN1VEN1KN1VEM3Get(state.StageCounters, stage), 0)
+ /*line zz_codegen3_cache.gen_test.go:265:1*/}
+ /*line codegen3_cache_test.mygo:193:1*/func TestCodegen3SummaryEarlyHitSkipsParseAndFFI(t *testing.T) {
+ /*line codegen3_cache_test.mygo:194:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_cache_test.mygo:193:1*/	moduleRoot := t.TempDir()
+ /*line codegen3_cache_test.mygo:196:3*/	writeFixture(t, moduleRoot, "go.mod", "module example.invalid/early-hit\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:197:3*/	writeFixture(t, moduleRoot, "add.mygo", "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
+ /*line codegen3_cache_test.mygo:193:1*/	cold := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:204:3*/	__mygo_expr_0 := syncBootstrapMyGO3WithState(moduleRoot, cold)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:205:22*/		t.Fatalf("cold build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:204:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:278:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:208:3*/	if codegen3StageCount(cold, "parse") == 0 || codegen3StageCount(cold, "ffi") == 0 {
+ /*line codegen3_cache_test.mygo:209:5*/		t.Fatalf("cold build did not record front-end work: parse=%d ffi=%d", codegen3StageCount(cold, "parse"), codegen3StageCount(cold, "ffi"))
+ /*line codegen3_cache_test.mygo:208:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:283:1*/	}
+ /*line codegen3_cache_test.mygo:193:1*/	probe := codegen3EarlyHitState(t, moduleRoot)
+	fingerprint := codegen3SourceFingerprint(moduleRoot, probe)
+ /*line codegen3_cache_test.mygo:216:3*/	__mygo_expr_2 := codegen3ReadPackageSummary(fingerprint)
+	if _, ok := __mygo_expr_2.(Option__None[codegen3PackageSummary]); ok {
+		t.Fatal("summary record was not readable: " + fingerprint)
+ /*line zz_codegen3_cache.gen_test.go:289:1*/	} else {
+ /*line codegen3_cache_test.mygo:216:3*/		if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Option__Some[codegen3PackageSummary]); ok {
+ /*line codegen3_cache_test.mygo:219:11*/			if !codegen3ValidatePackageSummary(moduleRoot, probe, __mygo_match___mygo_expr_3.F0, map[string]bool{}) {
+ /*line codegen3_cache_test.mygo:220:9*/				t.Fatal("summary record did not validate: " + fingerprint)
+ /*line codegen3_cache_test.mygo:219:7*/			} else {
+ /*line zz_codegen3_cache.gen_test.go:294:1*/			}
+ /*line codegen3_cache_test.mygo:216:3*/			entry := codegen3CacheLookup(__mygo_match___mygo_expr_3.F0.PackageKey)
+ /*line codegen3_cache_test.mygo:223:10*/			if entry == "" {
+ /*line codegen3_cache_test.mygo:224:9*/				t.Fatal("summary output entry is missing: " + __mygo_match___mygo_expr_3.F0.PackageKey)
+ /*line codegen3_cache_test.mygo:223:7*/			} else {
+ /*line zz_codegen3_cache.gen_test.go:299:1*/			}
+ /*line codegen3_cache_test.mygo:216:3*/			__mygo_expr_4 := codegen3MetadataInputs(probe, entry, __mygo_match___mygo_expr_3.F0.PackagePath)
+			if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Err[BootstrapInputs, error]); ok {
+ /*line codegen3_cache_test.mygo:227:26*/				t.Fatalf("summary metadata could not be loaded: %v", __mygo_match___mygo_expr_5.F0)
+ /*line codegen3_cache_test.mygo:216:3*/			} else {
+				if _, ok := __mygo_expr_4.(Result__Ok[BootstrapInputs, error]); ok {
+				} else {
+ /*line zz_codegen3_cache.gen_test.go:306:1*/				}
+			}
+ /*line codegen3_cache_test.mygo:216:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:309:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:193:1*/	warm := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:233:3*/	__mygo_expr_6 := syncBootstrapMyGO3WithState(moduleRoot, warm)
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:234:22*/		t.Fatalf("warm build: %v", __mygo_match___mygo_expr_7.F0)
+ /*line codegen3_cache_test.mygo:233:3*/	} else {
+		if _, ok := __mygo_expr_6.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:318:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:237:3*/	if codegen3StageCount(warm, "cache-early-hit") != 1 {
+ /*line codegen3_cache_test.mygo:238:5*/		t.Fatalf("warm build early hits = %d, want 1", codegen3StageCount(warm, "cache-early-hit"))
+ /*line codegen3_cache_test.mygo:237:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:323:1*/	}
+ /*line codegen3_cache_test.mygo:240:3*/	if codegen3StageCount(warm, "parse") != 0 || codegen3StageCount(warm, "ffi") != 0 {
+ /*line codegen3_cache_test.mygo:241:5*/		t.Fatalf("warm build repeated front-end work: parse=%d ffi=%d", codegen3StageCount(warm, "parse"), codegen3StageCount(warm, "ffi"))
+		return
+ /*line codegen3_cache_test.mygo:240:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:329:1*/	}
+}
+ /*line codegen3_cache_test.mygo:248:1*/func TestCodegen3SummaryInvalidFallsBackToParsing(t *testing.T) {
 	cache := t.TempDir()
- /*line codegen3_cache_test.mygo:151:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_cache_test.mygo:149:1*/	dir := t.TempDir()
- /*line codegen3_cache_test.mygo:153:3*/	codegen3CacheTestSources(t, dir)
- /*line codegen3_cache_test.mygo:154:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:250:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:248:1*/	moduleRoot := t.TempDir()
+ /*line codegen3_cache_test.mygo:252:3*/	writeFixture(t, moduleRoot, "go.mod", "module example.invalid/bad-summary\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:253:3*/	writeFixture(t, moduleRoot, "value.mygo", "package fixture\n\nfunc Value() -> Int\n  1\nend\n")
+ /*line codegen3_cache_test.mygo:248:1*/	cold := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:260:3*/	__mygo_expr_0 := syncBootstrapMyGO3WithState(moduleRoot, cold)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:261:22*/		t.Fatalf("cold build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:260:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:344:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:248:1*/	fingerprint := codegen3SourceFingerprint(moduleRoot, cold)
+	summaryPath := codegen3SummaryPath(fingerprint)
+ /*line codegen3_cache_test.mygo:266:3*/	var __mygo_expr_3 Result[struct{}, error]
+	__mygo_expr_2 := os.WriteFile(summaryPath, []byte("truncated"), os.FileMode(0o644))
+	if __mygo_expr_2 != nil {
+		__mygo_expr_3 = Err[struct{}, error](__mygo_expr_2)
+	} else {
+		__mygo_expr_3 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen_test.go:354:1*/		}{})
+	}
+ /*line codegen3_cache_test.mygo:266:3*/	__mygo_expr_4 := __mygo_expr_3
+	if __mygo_match___mygo_expr_5, ok := __mygo_expr_4.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache_test.mygo:271:22*/		t.Fatalf("corrupt summary: %v", __mygo_match___mygo_expr_5.F0)
+ /*line codegen3_cache_test.mygo:266:3*/	} else {
+		if _, ok := __mygo_expr_4.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:362:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:248:1*/	warm := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:275:3*/	__mygo_expr_6 := syncBootstrapMyGO3WithState(moduleRoot, warm)
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:276:22*/		t.Fatalf("fallback build: %v", __mygo_match___mygo_expr_7.F0)
+ /*line codegen3_cache_test.mygo:275:3*/	} else {
+		if _, ok := __mygo_expr_6.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:371:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:279:3*/	if codegen3StageCount(warm, "cache-early-hit") != 0 {
+ /*line codegen3_cache_test.mygo:280:5*/		t.Fatalf("corrupt summary produced an early hit")
+ /*line codegen3_cache_test.mygo:279:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:376:1*/	}
+ /*line codegen3_cache_test.mygo:282:3*/	if codegen3StageCount(warm, "parse") == 0 {
+ /*line codegen3_cache_test.mygo:283:5*/		t.Fatalf("corrupt summary skipped parsing instead of falling back")
+ /*line codegen3_cache_test.mygo:282:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:380:1*/	}
+ /*line codegen3_cache_test.mygo:248:1*/	repaired := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:286:3*/	__mygo_expr_8 := syncBootstrapMyGO3WithState(moduleRoot, repaired)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:287:22*/		t.Fatalf("repaired-summary build: %v", __mygo_match___mygo_expr_9.F0)
+ /*line codegen3_cache_test.mygo:286:3*/	} else {
+		if _, ok := __mygo_expr_8.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:388:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:290:3*/	if codegen3StageCount(repaired, "cache-early-hit") != 1 {
+ /*line codegen3_cache_test.mygo:291:5*/		t.Fatalf("fallback did not repair the summary")
+		return
+ /*line codegen3_cache_test.mygo:290:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:395:1*/	}
+}
+ /*line codegen3_cache_test.mygo:295:1*/func TestCodegen3SummaryTracksCheckoutIndependentSource(t *testing.T) {
+	cache := t.TempDir()
+ /*line codegen3_cache_test.mygo:297:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:295:1*/	first := t.TempDir()
+	second := t.TempDir()
+	source := "package fixture\n\nfunc Value() -> Int\n  1\nend\n"
+ /*line codegen3_cache_test.mygo:301:3*/	writeFixture(t, first, "go.mod", "module example.invalid/summary-checkout\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:302:3*/	writeFixture(t, second, "go.mod", "module example.invalid/summary-checkout\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:303:3*/	writeFixture(t, first, "value.mygo", source)
+ /*line codegen3_cache_test.mygo:304:3*/	writeFixture(t, second, "value.mygo", source)
+ /*line codegen3_cache_test.mygo:295:1*/	firstState := codegen3EarlyHitState(t, first)
+ /*line codegen3_cache_test.mygo:306:3*/	__mygo_expr_0 := syncBootstrapMyGO3WithState(first, firstState)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:307:22*/		t.Fatalf("first checkout: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:306:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:414:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:295:1*/	secondState := codegen3EarlyHitState(t, second)
+ /*line codegen3_cache_test.mygo:311:3*/	__mygo_expr_2 := syncBootstrapMyGO3WithState(second, secondState)
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:312:22*/		t.Fatalf("second checkout: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:311:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:423:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:315:3*/	if codegen3StageCount(secondState, "cache-early-hit") != 1 {
+ /*line codegen3_cache_test.mygo:316:5*/		t.Fatalf("second checkout did not reuse the summary")
+ /*line codegen3_cache_test.mygo:315:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:428:1*/	}
+ /*line codegen3_cache_test.mygo:295:1*/	summaryRoot := filepath.Join(cache, "summaries")
+ /*line codegen3_cache_test.mygo:319:3*/	var __mygo_expr_5 Result[[]string, error]
+	__mygo_expr_6, __mygo_expr_4 := filepath.Glob(filepath.Join(summaryRoot, "*", "*.json"))
+	if __mygo_expr_4 != nil {
+		__mygo_expr_5 = Err[[]string, error](__mygo_expr_4)
+	} else {
+		__mygo_expr_5 = Ok[[]string, error](__mygo_expr_6)
+ /*line zz_codegen3_cache.gen_test.go:436:1*/	}
+ /*line codegen3_cache_test.mygo:319:3*/	__mygo_expr_7 := __mygo_expr_5
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_7.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:320:22*/		t.Fatalf("list summaries: %v", __mygo_match___mygo_expr_9.F0)
+ /*line zz_codegen3_cache.gen_test.go:440:1*/	} else {
+ /*line codegen3_cache_test.mygo:319:3*/		if __mygo_match___mygo_expr_8, ok := __mygo_expr_7.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:322:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0) != 1 {
+ /*line codegen3_cache_test.mygo:323:9*/				t.Fatalf("summary files = %d, want one path-independent summary", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_8.F0))
+ /*line codegen3_cache_test.mygo:319:3*/			} else {
+ /*line zz_codegen3_cache.gen_test.go:445:1*/			}
+ /*line codegen3_cache_test.mygo:319:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:447:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:319:3*/	return
+ /*line zz_codegen3_cache.gen_test.go:450:1*/}
+ /*line codegen3_cache_test.mygo:329:1*/func TestCodegen3SummaryInvalidatesChangedSource(t *testing.T) {
+ /*line codegen3_cache_test.mygo:330:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_cache_test.mygo:329:1*/	moduleRoot := t.TempDir()
+ /*line codegen3_cache_test.mygo:332:3*/	writeFixture(t, moduleRoot, "go.mod", "module example.invalid/changed-summary\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:333:3*/	writeFixture(t, moduleRoot, "value.mygo", "package fixture\n\nfunc Value() -> Int\n  1\nend\n")
+ /*line codegen3_cache_test.mygo:329:1*/	cold := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:335:3*/	__mygo_expr_0 := syncBootstrapMyGO3WithState(moduleRoot, cold)
+	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:336:22*/		t.Fatalf("cold build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:335:3*/	} else {
+		if _, ok := __mygo_expr_0.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:463:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:339:3*/	writeFixture(t, moduleRoot, "value.mygo", "package fixture\n\nfunc Value() -> Int\n  2\nend\n")
+ /*line codegen3_cache_test.mygo:329:1*/	warm := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:341:3*/	__mygo_expr_2 := syncBootstrapMyGO3WithState(moduleRoot, warm)
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:342:22*/		t.Fatalf("changed-source build: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:341:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:473:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:345:3*/	if codegen3StageCount(warm, "cache-early-hit") != 0 {
+ /*line codegen3_cache_test.mygo:346:5*/		t.Fatalf("changed source reused a stale summary")
+ /*line codegen3_cache_test.mygo:345:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:478:1*/	}
+ /*line codegen3_cache_test.mygo:348:3*/	if codegen3StageCount(warm, "parse") == 0 || codegen3StageCount(warm, "ffi") == 0 {
+ /*line codegen3_cache_test.mygo:349:5*/		t.Fatalf("changed source did not re-enter the front end")
+		return
+ /*line codegen3_cache_test.mygo:348:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:484:1*/	}
+}
+ /*line codegen3_cache_test.mygo:353:1*/func TestCodegen3SummaryInvalidatesChangedDependency(t *testing.T) {
+ /*line codegen3_cache_test.mygo:354:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_cache_test.mygo:353:1*/	moduleRoot := t.TempDir()
+ /*line codegen3_cache_test.mygo:356:3*/	writeFixture(t, moduleRoot, "go.mod", "module example.invalid/summary-deps\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:353:1*/	lib := filepath.Join(moduleRoot, "lib")
+	app := filepath.Join(moduleRoot, "app")
+ /*line codegen3_cache_test.mygo:359:3*/	var __mygo_expr_1 Result[struct{}, error]
+	__mygo_expr_0 := os.MkdirAll(lib, os.FileMode(0o755))
+	if __mygo_expr_0 != nil {
+		__mygo_expr_1 = Err[struct{}, error](__mygo_expr_0)
+	} else {
+		__mygo_expr_1 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen_test.go:498:1*/		}{})
+	}
+ /*line codegen3_cache_test.mygo:359:3*/	__mygo_expr_2 := __mygo_expr_1
+	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache_test.mygo:360:22*/		t.Fatalf("lib directory: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:359:3*/	} else {
+		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:506:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:363:3*/	var __mygo_expr_5 Result[struct{}, error]
+	__mygo_expr_4 := os.MkdirAll(app, os.FileMode(0o755))
+	if __mygo_expr_4 != nil {
+		__mygo_expr_5 = Err[struct{}, error](__mygo_expr_4)
+	} else {
+		__mygo_expr_5 = Ok[struct{}, error](struct {
+ /*line zz_codegen3_cache.gen_test.go:514:1*/		}{})
+	}
+ /*line codegen3_cache_test.mygo:363:3*/	__mygo_expr_6 := __mygo_expr_5
+	if __mygo_match___mygo_expr_7, ok := __mygo_expr_6.(Result__Err[struct{}, error]); ok {
+ /*line codegen3_cache_test.mygo:364:22*/		t.Fatalf("app directory: %v", __mygo_match___mygo_expr_7.F0)
+ /*line codegen3_cache_test.mygo:363:3*/	} else {
+		if _, ok := __mygo_expr_6.(Result__Ok[struct{}, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:522:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:367:3*/	writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
+ /*line codegen3_cache_test.mygo:368:3*/	writeFixture(t, app, "main.mygo", "package app\n\nimport lib \"example.invalid/summary-deps/lib\"\n\nfunc Value() -> Int\n  lib.Add(1, 2)\nend\n")
+ /*line codegen3_cache_test.mygo:353:1*/	cold := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:375:3*/	__mygo_expr_8 := syncBootstrapMyGO3WithState(moduleRoot, cold)
+	if __mygo_match___mygo_expr_9, ok := __mygo_expr_8.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:376:22*/		t.Fatalf("cold build: %v", __mygo_match___mygo_expr_9.F0)
+ /*line codegen3_cache_test.mygo:375:3*/	} else {
+		if _, ok := __mygo_expr_8.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:533:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:379:3*/	writeFixture(t, lib, "lib.mygo", "package lib\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b + 1\nend\n")
+ /*line codegen3_cache_test.mygo:353:1*/	warm := codegen3EarlyHitState(t, moduleRoot)
+ /*line codegen3_cache_test.mygo:381:3*/	__mygo_expr_10 := syncBootstrapMyGO3WithState(moduleRoot, warm)
+	if __mygo_match___mygo_expr_11, ok := __mygo_expr_10.(Result__Err[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:382:22*/		t.Fatalf("changed-dependency build: %v", __mygo_match___mygo_expr_11.F0)
+ /*line codegen3_cache_test.mygo:381:3*/	} else {
+		if _, ok := __mygo_expr_10.(Result__Ok[[]string, error]); ok {
+		} else {
+ /*line zz_codegen3_cache.gen_test.go:543:1*/		}
+	}
+ /*line codegen3_cache_test.mygo:385:3*/	if codegen3StageCount(warm, "cache-early-hit") != 0 {
+ /*line codegen3_cache_test.mygo:386:5*/		t.Fatalf("changed dependency reused a stale summary")
+ /*line codegen3_cache_test.mygo:385:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:548:1*/	}
+ /*line codegen3_cache_test.mygo:388:3*/	if codegen3StageCount(warm, "parse") < 2 {
+ /*line codegen3_cache_test.mygo:389:5*/		t.Fatalf("changed dependency did not invalidate its importer: parse=%d", codegen3StageCount(warm, "parse"))
+		return
+ /*line codegen3_cache_test.mygo:388:3*/	} else {
+		return
+ /*line zz_codegen3_cache.gen_test.go:554:1*/	}
+}
+ /*line codegen3_cache_test.mygo:393:1*/func TestCodegen3CacheRecoversFromCorruptEntry(t *testing.T) {
+	cache := t.TempDir()
+ /*line codegen3_cache_test.mygo:395:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:393:1*/	dir := t.TempDir()
+ /*line codegen3_cache_test.mygo:397:3*/	codegen3CacheTestSources(t, dir)
+ /*line codegen3_cache_test.mygo:398:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:155:22*/		t.Fatalf("first build: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:154:3*/	} else {
+ /*line codegen3_cache_test.mygo:399:22*/		t.Fatalf("first build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:398:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:226:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:567:1*/		}
 	}
- /*line codegen3_cache_test.mygo:158:3*/	var __mygo_expr_3 Result[[]string, error]
+ /*line codegen3_cache_test.mygo:402:3*/	var __mygo_expr_3 Result[[]string, error]
 	__mygo_expr_4, __mygo_expr_2 := filepath.Glob(filepath.Join(cache, "build", "*", "*-d", "zz_add.gen.go"))
 	if __mygo_expr_2 != nil {
 		__mygo_expr_3 = Err[[]string, error](__mygo_expr_2)
 	} else {
 		__mygo_expr_3 = Ok[[]string, error](__mygo_expr_4)
- /*line zz_codegen3_cache.gen_test.go:234:1*/	}
- /*line codegen3_cache_test.mygo:158:3*/	__mygo_expr_5 := __mygo_expr_3
+ /*line zz_codegen3_cache.gen_test.go:575:1*/	}
+ /*line codegen3_cache_test.mygo:402:3*/	__mygo_expr_5 := __mygo_expr_3
 	if __mygo_match___mygo_expr_11, ok := __mygo_expr_5.(Result__Err[[]string, error]); ok {
- /*line codegen3_cache_test.mygo:159:22*/		t.Fatalf("locate entry: %v", __mygo_match___mygo_expr_11.F0)
- /*line zz_codegen3_cache.gen_test.go:238:1*/	} else {
- /*line codegen3_cache_test.mygo:158:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]string, error]); ok {
- /*line codegen3_cache_test.mygo:161:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) == 0 {
- /*line codegen3_cache_test.mygo:162:9*/				t.Fatalf("%s", "entry file missing")
- /*line codegen3_cache_test.mygo:161:7*/			} else {
- /*line zz_codegen3_cache.gen_test.go:243:1*/			}
- /*line codegen3_cache_test.mygo:158:3*/			var __mygo_expr_8 Result[struct{}, error]
+ /*line codegen3_cache_test.mygo:403:22*/		t.Fatalf("locate entry: %v", __mygo_match___mygo_expr_11.F0)
+ /*line zz_codegen3_cache.gen_test.go:579:1*/	} else {
+ /*line codegen3_cache_test.mygo:402:3*/		if __mygo_match___mygo_expr_6, ok := __mygo_expr_5.(Result__Ok[[]string, error]); ok {
+ /*line codegen3_cache_test.mygo:405:10*/			if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(__mygo_match___mygo_expr_6.F0) == 0 {
+ /*line codegen3_cache_test.mygo:406:9*/				t.Fatalf("%s", "entry file missing")
+ /*line codegen3_cache_test.mygo:405:7*/			} else {
+ /*line zz_codegen3_cache.gen_test.go:584:1*/			}
+ /*line codegen3_cache_test.mygo:402:3*/			var __mygo_expr_8 Result[struct{}, error]
 			__mygo_expr_7 := os.WriteFile(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(__mygo_match___mygo_expr_6.F0, 0), ""), []byte("corrupt"), os.FileMode(0o644))
 			if __mygo_expr_7 != nil {
 				__mygo_expr_8 = Err[struct{}, error](__mygo_expr_7)
 			} else {
 				__mygo_expr_8 = Ok[struct{}, error](struct {
- /*line zz_codegen3_cache.gen_test.go:250:1*/				}{})
+ /*line zz_codegen3_cache.gen_test.go:591:1*/				}{})
 			}
- /*line codegen3_cache_test.mygo:158:3*/			__mygo_expr_9 := __mygo_expr_8
+ /*line codegen3_cache_test.mygo:402:3*/			__mygo_expr_9 := __mygo_expr_8
 			if __mygo_match___mygo_expr_10, ok := __mygo_expr_9.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:165:26*/				t.Fatalf("corrupt entry: %v", __mygo_match___mygo_expr_10.F0)
- /*line codegen3_cache_test.mygo:158:3*/			} else {
+ /*line codegen3_cache_test.mygo:409:26*/				t.Fatalf("corrupt entry: %v", __mygo_match___mygo_expr_10.F0)
+ /*line codegen3_cache_test.mygo:402:3*/			} else {
 				if _, ok := __mygo_expr_9.(Result__Ok[struct{}, error]); ok {
 				} else {
- /*line zz_codegen3_cache.gen_test.go:258:1*/				}
+ /*line zz_codegen3_cache.gen_test.go:599:1*/				}
 			}
- /*line codegen3_cache_test.mygo:158:3*/		} else {
- /*line zz_codegen3_cache.gen_test.go:261:1*/		}
+ /*line codegen3_cache_test.mygo:402:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:602:1*/		}
 	}
- /*line codegen3_cache_test.mygo:170:3*/	__mygo_expr_12 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:414:3*/	__mygo_expr_12 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
 	if __mygo_match___mygo_expr_13, ok := __mygo_expr_12.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:171:22*/		t.Fatalf("rebuild after corruption: %v", __mygo_match___mygo_expr_13.F0)
- /*line codegen3_cache_test.mygo:170:3*/	} else {
+ /*line codegen3_cache_test.mygo:415:22*/		t.Fatalf("rebuild after corruption: %v", __mygo_match___mygo_expr_13.F0)
+ /*line codegen3_cache_test.mygo:414:3*/	} else {
 		if _, ok := __mygo_expr_12.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:269:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:610:1*/		}
 	}
- /*line codegen3_cache_test.mygo:149:1*/	entries := codegen3CacheEntryDirs(cache)
- /*line codegen3_cache_test.mygo:175:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) == 0 {
- /*line codegen3_cache_test.mygo:176:5*/		t.Fatalf("%s", "cache entry missing after recovery")
- /*line codegen3_cache_test.mygo:175:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:275:1*/	}
- /*line codegen3_cache_test.mygo:178:3*/	__mygo_expr_14 := codegen3ReadEntry(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(entries, 0), ""), "")
+ /*line codegen3_cache_test.mygo:393:1*/	entries := codegen3CacheEntryDirs(cache)
+ /*line codegen3_cache_test.mygo:419:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(entries) == 0 {
+ /*line codegen3_cache_test.mygo:420:5*/		t.Fatalf("%s", "cache entry missing after recovery")
+ /*line codegen3_cache_test.mygo:419:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:616:1*/	}
+ /*line codegen3_cache_test.mygo:422:3*/	__mygo_expr_14 := codegen3ReadEntry(MygoIN6OptionM8UnwrapOr(MygoIT10IIndexableFN14SliceIndexableGN1TEGN5SliceGN1TEN3IntN1TEM3Get(entries, 0), ""), "")
 	if _, ok := __mygo_expr_14.(Option__None[[]string]); ok {
 		t.Fatalf("%s", "corrupt entry was not repaired")
 	} else {
 		if _, ok := __mygo_expr_14.(Option__Some[[]string]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:282:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:623:1*/		}
 	}
- /*line codegen3_cache_test.mygo:178:3*/	return
- /*line zz_codegen3_cache.gen_test.go:285:1*/}
- /*line codegen3_cache_test.mygo:184:1*/func TestCodegen3EmitCopiesGeneratedFiles(t *testing.T) {
- /*line codegen3_cache_test.mygo:185:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_cache_test.mygo:184:1*/	dir := t.TempDir()
- /*line codegen3_cache_test.mygo:187:3*/	codegen3CacheTestSources(t, dir)
- /*line codegen3_cache_test.mygo:184:1*/	emit := t.TempDir()
+ /*line codegen3_cache_test.mygo:422:3*/	return
+ /*line zz_codegen3_cache.gen_test.go:626:1*/}
+ /*line codegen3_cache_test.mygo:428:1*/func TestCodegen3EmitCopiesGeneratedFiles(t *testing.T) {
+ /*line codegen3_cache_test.mygo:429:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_cache_test.mygo:428:1*/	dir := t.TempDir()
+ /*line codegen3_cache_test.mygo:431:3*/	codegen3CacheTestSources(t, dir)
+ /*line codegen3_cache_test.mygo:428:1*/	emit := t.TempDir()
 	options := PipelineOptions{Codegen3: true, OptimizationLevel: 2, IR3Dump: "", EmitDir: emit, NoPrelude: true}
- /*line codegen3_cache_test.mygo:196:3*/	__mygo_expr_0 := buildCodegen3(dir, options, false, []string{})
+ /*line codegen3_cache_test.mygo:440:3*/	__mygo_expr_0 := buildCodegen3(dir, options, false, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:197:22*/		t.Fatalf("build with emit: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:196:3*/	} else {
+ /*line codegen3_cache_test.mygo:441:22*/		t.Fatalf("build with emit: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:440:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:298:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:639:1*/		}
 	}
- /*line codegen3_cache_test.mygo:200:3*/	if !codegen3FileExists(filepath.Join(emit, "zz_add.gen.go")) {
- /*line codegen3_cache_test.mygo:201:5*/		t.Fatalf("%s", "emitted file missing")
- /*line codegen3_cache_test.mygo:200:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:303:1*/	}
- /*line codegen3_cache_test.mygo:203:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
- /*line codegen3_cache_test.mygo:204:5*/		t.Fatalf("%s", "emit must not create a project-local build directory")
+ /*line codegen3_cache_test.mygo:444:3*/	if !codegen3FileExists(filepath.Join(emit, "zz_add.gen.go")) {
+ /*line codegen3_cache_test.mygo:445:5*/		t.Fatalf("%s", "emitted file missing")
+ /*line codegen3_cache_test.mygo:444:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:644:1*/	}
+ /*line codegen3_cache_test.mygo:447:3*/	if codegen3FileExists(filepath.Join(dir, "build")) {
+ /*line codegen3_cache_test.mygo:448:5*/		t.Fatalf("%s", "emit must not create a project-local build directory")
 		return
- /*line codegen3_cache_test.mygo:203:3*/	} else {
+ /*line codegen3_cache_test.mygo:447:3*/	} else {
 		return
- /*line zz_codegen3_cache.gen_test.go:309:1*/	}
+ /*line zz_codegen3_cache.gen_test.go:650:1*/	}
 }
- /*line codegen3_cache_test.mygo:208:1*/func TestCodegen3CacheCleanRemovesEntries(t *testing.T) {
+ /*line codegen3_cache_test.mygo:452:1*/func TestCodegen3CacheCleanRemovesEntries(t *testing.T) {
 	cache := t.TempDir()
- /*line codegen3_cache_test.mygo:210:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_cache_test.mygo:208:1*/	dir := t.TempDir()
- /*line codegen3_cache_test.mygo:212:3*/	codegen3CacheTestSources(t, dir)
- /*line codegen3_cache_test.mygo:213:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
+ /*line codegen3_cache_test.mygo:454:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:452:1*/	dir := t.TempDir()
+ /*line codegen3_cache_test.mygo:456:3*/	codegen3CacheTestSources(t, dir)
+ /*line codegen3_cache_test.mygo:457:3*/	__mygo_expr_0 := buildCodegen3(dir, codegen3CacheTestOptions(), false, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:214:22*/		t.Fatalf("build: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:213:3*/	} else {
+ /*line codegen3_cache_test.mygo:458:22*/		t.Fatalf("build: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:457:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:322:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:663:1*/		}
 	}
- /*line codegen3_cache_test.mygo:217:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) == 0 {
- /*line codegen3_cache_test.mygo:218:5*/		t.Fatalf("%s", "expected a cache entry before cleaning")
- /*line codegen3_cache_test.mygo:217:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:327:1*/	}
- /*line codegen3_cache_test.mygo:220:3*/	__mygo_expr_2 := codegen3LockCache(true, 5000)
+ /*line codegen3_cache_test.mygo:461:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) == 0 {
+ /*line codegen3_cache_test.mygo:462:5*/		t.Fatalf("%s", "expected a cache entry before cleaning")
+ /*line codegen3_cache_test.mygo:461:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:668:1*/	}
+ /*line codegen3_cache_test.mygo:464:3*/	__mygo_expr_2 := codegen3LockCache(true, 5000)
 	if __mygo_match___mygo_expr_5, ok := __mygo_expr_2.(Result__Err[bool, error]); ok {
- /*line codegen3_cache_test.mygo:221:22*/		t.Fatalf("exclusive lock: %v", __mygo_match___mygo_expr_5.F0)
- /*line zz_codegen3_cache.gen_test.go:331:1*/	} else {
- /*line codegen3_cache_test.mygo:220:3*/		if _, ok := __mygo_expr_2.(Result__Ok[bool, error]); ok {
- /*line codegen3_cache_test.mygo:223:7*/			__mygo_expr_3 := codegen3CacheClean()
+ /*line codegen3_cache_test.mygo:465:22*/		t.Fatalf("exclusive lock: %v", __mygo_match___mygo_expr_5.F0)
+ /*line zz_codegen3_cache.gen_test.go:672:1*/	} else {
+ /*line codegen3_cache_test.mygo:464:3*/		if _, ok := __mygo_expr_2.(Result__Ok[bool, error]); ok {
+ /*line codegen3_cache_test.mygo:467:7*/			__mygo_expr_3 := codegen3CacheClean()
 			if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[int64, error]); ok {
- /*line codegen3_cache_test.mygo:224:26*/				t.Fatalf("clean: %v", __mygo_match___mygo_expr_4.F0)
- /*line codegen3_cache_test.mygo:223:7*/			} else {
+ /*line codegen3_cache_test.mygo:468:26*/				t.Fatalf("clean: %v", __mygo_match___mygo_expr_4.F0)
+ /*line codegen3_cache_test.mygo:467:7*/			} else {
 				if _, ok := __mygo_expr_3.(Result__Ok[int64, error]); ok {
 				} else {
- /*line zz_codegen3_cache.gen_test.go:339:1*/				}
+ /*line zz_codegen3_cache.gen_test.go:680:1*/				}
 			}
- /*line codegen3_cache_test.mygo:227:7*/			codegen3UnlockCache()
- /*line codegen3_cache_test.mygo:220:3*/		} else {
- /*line zz_codegen3_cache.gen_test.go:343:1*/		}
+ /*line codegen3_cache_test.mygo:471:7*/			codegen3UnlockCache()
+ /*line codegen3_cache_test.mygo:464:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:684:1*/		}
 	}
- /*line codegen3_cache_test.mygo:231:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 0 {
- /*line codegen3_cache_test.mygo:232:5*/		t.Fatalf("%s", "clean left cache entries behind")
+ /*line codegen3_cache_test.mygo:475:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 0 {
+ /*line codegen3_cache_test.mygo:476:5*/		t.Fatalf("%s", "clean left cache entries behind")
 		return
- /*line codegen3_cache_test.mygo:231:3*/	} else {
+ /*line codegen3_cache_test.mygo:475:3*/	} else {
 		return
- /*line zz_codegen3_cache.gen_test.go:350:1*/	}
+ /*line zz_codegen3_cache.gen_test.go:691:1*/	}
 }
- /*line codegen3_cache_test.mygo:236:1*/func TestCodegen3CacheDisabled(t *testing.T) {
- /*line codegen3_cache_test.mygo:237:3*/	t.Setenv("MYGO_CACHE", "off")
- /*line codegen3_cache_test.mygo:238:3*/	if codegen3CacheRootPath() != "" {
- /*line codegen3_cache_test.mygo:239:5*/		t.Fatalf("%s", "MYGO_CACHE=off must disable the cache")
- /*line codegen3_cache_test.mygo:238:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:357:1*/	}
- /*line codegen3_cache_test.mygo:241:3*/	__mygo_expr_0 := codegen3CacheClean()
+ /*line codegen3_cache_test.mygo:480:1*/func TestCodegen3CacheDisabled(t *testing.T) {
+ /*line codegen3_cache_test.mygo:481:3*/	t.Setenv("MYGO_CACHE", "off")
+ /*line codegen3_cache_test.mygo:482:3*/	if codegen3CacheRootPath() != "" {
+ /*line codegen3_cache_test.mygo:483:5*/		t.Fatalf("%s", "MYGO_CACHE=off must disable the cache")
+ /*line codegen3_cache_test.mygo:482:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:698:1*/	}
+ /*line codegen3_cache_test.mygo:485:3*/	__mygo_expr_0 := codegen3CacheClean()
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[int64, error]); ok {
- /*line codegen3_cache_test.mygo:242:22*/		t.Fatalf("clean with cache disabled: %v", __mygo_match___mygo_expr_2.F0)
- /*line zz_codegen3_cache.gen_test.go:361:1*/	} else {
- /*line codegen3_cache_test.mygo:241:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int64, error]); ok {
- /*line codegen3_cache_test.mygo:244:21*/			if __mygo_match___mygo_expr_1.F0 != int64(0) {
- /*line codegen3_cache_test.mygo:245:9*/				t.Fatalf("removed = %d, want 0", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:241:3*/			} else {
- /*line zz_codegen3_cache.gen_test.go:366:1*/			}
- /*line codegen3_cache_test.mygo:241:3*/		} else {
- /*line zz_codegen3_cache.gen_test.go:368:1*/		}
+ /*line codegen3_cache_test.mygo:486:22*/		t.Fatalf("clean with cache disabled: %v", __mygo_match___mygo_expr_2.F0)
+ /*line zz_codegen3_cache.gen_test.go:702:1*/	} else {
+ /*line codegen3_cache_test.mygo:485:3*/		if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Ok[int64, error]); ok {
+ /*line codegen3_cache_test.mygo:488:21*/			if __mygo_match___mygo_expr_1.F0 != int64(0) {
+ /*line codegen3_cache_test.mygo:489:9*/				t.Fatalf("removed = %d, want 0", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:485:3*/			} else {
+ /*line zz_codegen3_cache.gen_test.go:707:1*/			}
+ /*line codegen3_cache_test.mygo:485:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:709:1*/		}
 	}
- /*line codegen3_cache_test.mygo:241:3*/	return
- /*line zz_codegen3_cache.gen_test.go:371:1*/}
- /*line codegen3_cache_test.mygo:251:1*/func TestCodegen3CacheExclusiveLockWait(t *testing.T) {
- /*line codegen3_cache_test.mygo:252:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
- /*line codegen3_cache_test.mygo:253:3*/	__mygo_expr_0 := codegen3LockCache(false, 5000)
+ /*line codegen3_cache_test.mygo:485:3*/	return
+ /*line zz_codegen3_cache.gen_test.go:712:1*/}
+ /*line codegen3_cache_test.mygo:495:1*/func TestCodegen3CacheExclusiveLockWait(t *testing.T) {
+ /*line codegen3_cache_test.mygo:496:3*/	t.Setenv("MYGO_CACHE", t.TempDir())
+ /*line codegen3_cache_test.mygo:497:3*/	__mygo_expr_0 := codegen3LockCache(false, 5000)
 	if __mygo_match___mygo_expr_2, ok := __mygo_expr_0.(Result__Err[bool, error]); ok {
- /*line codegen3_cache_test.mygo:254:22*/		t.Fatalf("shared lock: %v", __mygo_match___mygo_expr_2.F0)
- /*line codegen3_cache_test.mygo:253:3*/	} else {
+ /*line codegen3_cache_test.mygo:498:22*/		t.Fatalf("shared lock: %v", __mygo_match___mygo_expr_2.F0)
+ /*line codegen3_cache_test.mygo:497:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[bool, error]); ok {
- /*line codegen3_cache_test.mygo:256:7*/			__mygo_expr_1 := codegen3LockCache(true, 50)
+ /*line codegen3_cache_test.mygo:500:7*/			__mygo_expr_1 := codegen3LockCache(true, 50)
 			if _, ok := __mygo_expr_1.(Result__Ok[bool, error]); ok {
- /*line codegen3_cache_test.mygo:258:11*/				codegen3UnlockCache()
- /*line codegen3_cache_test.mygo:256:7*/				t.Fatalf("%s", "exclusive lock succeeded while a shared lock was held")
+ /*line codegen3_cache_test.mygo:502:11*/				codegen3UnlockCache()
+ /*line codegen3_cache_test.mygo:500:7*/				t.Fatalf("%s", "exclusive lock succeeded while a shared lock was held")
 			} else {
 				if _, ok := __mygo_expr_1.(Result__Err[bool, error]); ok {
 				} else {
- /*line zz_codegen3_cache.gen_test.go:386:1*/				}
+ /*line zz_codegen3_cache.gen_test.go:727:1*/				}
 			}
- /*line codegen3_cache_test.mygo:263:7*/			codegen3UnlockCache()
- /*line codegen3_cache_test.mygo:253:3*/		} else {
- /*line zz_codegen3_cache.gen_test.go:390:1*/		}
+ /*line codegen3_cache_test.mygo:507:7*/			codegen3UnlockCache()
+ /*line codegen3_cache_test.mygo:497:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:731:1*/		}
 	}
- /*line codegen3_cache_test.mygo:267:3*/	__mygo_expr_3 := codegen3LockCache(true, 5000)
+ /*line codegen3_cache_test.mygo:511:3*/	__mygo_expr_3 := codegen3LockCache(true, 5000)
 	if __mygo_match___mygo_expr_4, ok := __mygo_expr_3.(Result__Err[bool, error]); ok {
- /*line codegen3_cache_test.mygo:268:22*/		t.Fatalf("exclusive lock after release: %v", __mygo_match___mygo_expr_4.F0)
- /*line codegen3_cache_test.mygo:267:3*/	} else {
+ /*line codegen3_cache_test.mygo:512:22*/		t.Fatalf("exclusive lock after release: %v", __mygo_match___mygo_expr_4.F0)
+ /*line codegen3_cache_test.mygo:511:3*/	} else {
 		if _, ok := __mygo_expr_3.(Result__Ok[bool, error]); ok {
- /*line codegen3_cache_test.mygo:270:7*/			codegen3UnlockCache()
- /*line codegen3_cache_test.mygo:267:3*/		} else {
- /*line zz_codegen3_cache.gen_test.go:399:1*/		}
+ /*line codegen3_cache_test.mygo:514:7*/			codegen3UnlockCache()
+ /*line codegen3_cache_test.mygo:511:3*/		} else {
+ /*line zz_codegen3_cache.gen_test.go:740:1*/		}
 	}
- /*line codegen3_cache_test.mygo:267:3*/	return
- /*line zz_codegen3_cache.gen_test.go:402:1*/}
- /*line codegen3_cache_test.mygo:276:1*/func codegen3TestModule(t *testing.T, dir string, modulePath string) {
- /*line codegen3_cache_test.mygo:277:3*/	writeFixture(t, dir, "go.mod", "module "+modulePath+"\n\ngo 1.24\n")
- /*line codegen3_cache_test.mygo:278:3*/	writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
- /*line codegen3_cache_test.mygo:279:3*/	writeFixture(t, dir, "add_test.mygo", "package fixture\n\nimport testing \"go:testing\"\n\nfunc TestAdd(t: Ref[testing.T]) -> ()\n  if Add(1, 2) != 3 then\n    t.Fatal(\"bad sum\")\n  end\nend\n")
+ /*line codegen3_cache_test.mygo:511:3*/	return
+ /*line zz_codegen3_cache.gen_test.go:743:1*/}
+ /*line codegen3_cache_test.mygo:520:1*/func codegen3TestModule(t *testing.T, dir string, modulePath string) {
+ /*line codegen3_cache_test.mygo:521:3*/	writeFixture(t, dir, "go.mod", "module "+modulePath+"\n\ngo 1.24\n")
+ /*line codegen3_cache_test.mygo:522:3*/	writeFixture(t, dir, "add.mygo", "package fixture\n\nfunc Add(a: Int, b: Int) -> Int\n  a + b\nend\n")
+ /*line codegen3_cache_test.mygo:523:3*/	writeFixture(t, dir, "add_test.mygo", "package fixture\n\nimport testing \"go:testing\"\n\nfunc TestAdd(t: Ref[testing.T]) -> ()\n  if Add(1, 2) != 3 then\n    t.Fatal(\"bad sum\")\n  end\nend\n")
 	return
- /*line zz_codegen3_cache.gen_test.go:408:1*/}
- /*line codegen3_cache_test.mygo:282:1*/func TestCodegen3TestSharedCacheAcrossModules(t *testing.T) {
+ /*line zz_codegen3_cache.gen_test.go:749:1*/}
+ /*line codegen3_cache_test.mygo:526:1*/func TestCodegen3TestSharedCacheAcrossModules(t *testing.T) {
 	cache := t.TempDir()
- /*line codegen3_cache_test.mygo:284:3*/	t.Setenv("MYGO_CACHE", cache)
- /*line codegen3_cache_test.mygo:282:1*/	first := t.TempDir()
+ /*line codegen3_cache_test.mygo:528:3*/	t.Setenv("MYGO_CACHE", cache)
+ /*line codegen3_cache_test.mygo:526:1*/	first := t.TempDir()
 	second := t.TempDir()
- /*line codegen3_cache_test.mygo:287:3*/	codegen3TestModule(t, first, "example.invalid/mod-one")
- /*line codegen3_cache_test.mygo:288:3*/	codegen3TestModule(t, second, "example.invalid/mod-two")
- /*line codegen3_cache_test.mygo:289:3*/	__mygo_expr_0 := buildCodegen3(first, codegen3CacheTestOptions(), true, []string{})
+ /*line codegen3_cache_test.mygo:531:3*/	codegen3TestModule(t, first, "example.invalid/mod-one")
+ /*line codegen3_cache_test.mygo:532:3*/	codegen3TestModule(t, second, "example.invalid/mod-two")
+ /*line codegen3_cache_test.mygo:533:3*/	__mygo_expr_0 := buildCodegen3(first, codegen3CacheTestOptions(), true, []string{})
 	if __mygo_match___mygo_expr_1, ok := __mygo_expr_0.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:290:22*/		t.Fatalf("first module test: %v", __mygo_match___mygo_expr_1.F0)
- /*line codegen3_cache_test.mygo:289:3*/	} else {
+ /*line codegen3_cache_test.mygo:534:22*/		t.Fatalf("first module test: %v", __mygo_match___mygo_expr_1.F0)
+ /*line codegen3_cache_test.mygo:533:3*/	} else {
 		if _, ok := __mygo_expr_0.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:422:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:763:1*/		}
 	}
- /*line codegen3_cache_test.mygo:293:3*/	__mygo_expr_2 := buildCodegen3(second, codegen3CacheTestOptions(), true, []string{})
+ /*line codegen3_cache_test.mygo:537:3*/	__mygo_expr_2 := buildCodegen3(second, codegen3CacheTestOptions(), true, []string{})
 	if __mygo_match___mygo_expr_3, ok := __mygo_expr_2.(Result__Err[struct{}, error]); ok {
- /*line codegen3_cache_test.mygo:294:22*/		t.Fatalf("second module test: %v", __mygo_match___mygo_expr_3.F0)
- /*line codegen3_cache_test.mygo:293:3*/	} else {
+ /*line codegen3_cache_test.mygo:538:22*/		t.Fatalf("second module test: %v", __mygo_match___mygo_expr_3.F0)
+ /*line codegen3_cache_test.mygo:537:3*/	} else {
 		if _, ok := __mygo_expr_2.(Result__Ok[struct{}, error]); ok {
 		} else {
- /*line zz_codegen3_cache.gen_test.go:430:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:771:1*/		}
 	}
- /*line codegen3_cache_test.mygo:297:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 1 {
- /*line codegen3_cache_test.mygo:298:5*/		t.Fatalf("cache entries = %d, want one shared entry", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)))
- /*line codegen3_cache_test.mygo:297:3*/	} else {
- /*line zz_codegen3_cache.gen_test.go:435:1*/	}
- /*line codegen3_cache_test.mygo:300:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{first, second}, func(dir string) {
- /*line codegen3_cache_test.mygo:301:5*/		if codegen3FileExists(filepath.Join(dir, "build")) {
- /*line codegen3_cache_test.mygo:302:7*/			t.Fatalf("project-local build directory in %s", dir)
+ /*line codegen3_cache_test.mygo:541:3*/	if MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)) != 1 {
+ /*line codegen3_cache_test.mygo:542:5*/		t.Fatalf("cache entries = %d, want one shared entry", MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM3Len(codegen3CacheEntryDirs(cache)))
+ /*line codegen3_cache_test.mygo:541:3*/	} else {
+ /*line zz_codegen3_cache.gen_test.go:776:1*/	}
+ /*line codegen3_cache_test.mygo:544:3*/	MygoIT11IEnumerableFN16SliceIEnumerableGN1TEGN5SliceGN1TEN1TEM4Each([]string{first, second}, func(dir string) {
+ /*line codegen3_cache_test.mygo:545:5*/		if codegen3FileExists(filepath.Join(dir, "build")) {
+ /*line codegen3_cache_test.mygo:546:7*/			t.Fatalf("project-local build directory in %s", dir)
 			return
- /*line codegen3_cache_test.mygo:301:5*/		} else {
+ /*line codegen3_cache_test.mygo:545:5*/		} else {
 			return
- /*line zz_codegen3_cache.gen_test.go:442:1*/		}
+ /*line zz_codegen3_cache.gen_test.go:783:1*/		}
 	})
- /*line codegen3_cache_test.mygo:300:3*/	return
- /*line zz_codegen3_cache.gen_test.go:445:1*/}
+ /*line codegen3_cache_test.mygo:544:3*/	return
+ /*line zz_codegen3_cache.gen_test.go:786:1*/}

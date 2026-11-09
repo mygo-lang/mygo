@@ -20,6 +20,7 @@ import ast2 "github.com/mygo-lang/mygo/internal/mygo/ast2"
 import flock "go:github.com/gofrs/flock"
 
 var codegen3CacheFormat: String = "mygo-codegen3-cache-v1"
+var codegen3SummaryFormat: String = "mygo-codegen3-summary-v1"
 var codegen3CompilerIDCache: String = ""
 var codegen3LockHandle: Option[Ref[flock.Flock]] = None
 
@@ -48,6 +49,27 @@ end
 struct codegen3OverlayPayload
   Replace: Map[String, String] `json:"Replace"`
 end
+
+struct codegen3SummaryDependency
+  Path: String `json:"path"`
+  InputKey: String `json:"inputKey"`
+end
+
+struct codegen3PackageSummary
+  Format: String `json:"format"`
+  SourceFingerprint: String `json:"sourceFingerprint"`
+  InputKey: String `json:"inputKey"`
+  PackageKey: String `json:"packageKey"`
+  PackagePath: String `json:"packagePath"`
+  Compiler: String `json:"compiler"`
+  GoInputs: String `json:"goInputs"`
+  Optimization: Int `json:"optimization"`
+  NoPrelude: Bool `json:"noPrelude"`
+  SourceDigest: String `json:"sourceDigest"`
+  Dependencies: Slice[codegen3SummaryDependency] `json:"dependencies"`
+  Checksum: String `json:"checksum"`
+end
+
 
 # The cache root follows GOCACHE semantics: MYGO_CACHE selects it, an empty
 # value means the default, and "off"/"0"/"false" disables caching.
@@ -120,6 +142,8 @@ func codegen3GoInputsDigest(moduleRoot: String) -> String
     os.Getenv("GOTOOLCHAIN"),
     codegen3NormalizeGoMod(gomod),
     gosum,
+    codegen3ModuleGoInputDigest(moduleRoot),
+    codegen3LocalReplacementDigest(moduleRoot),
   ])
 end
 
@@ -193,6 +217,387 @@ func codegen3PackageKey(
     codegen3SourceDigest(dir),
   ]
   codegen3HashParts(parts.Concat(sorted))
+end
+
+func codegen3SourceFingerprint(dir: String, state: BootstrapState) -> String
+  codegen3HashParts([
+    codegen3SummaryFormat,
+    "repr=3",
+    "adapter=1",
+    state.CompilerID,
+    state.GoInputsDigest,
+    "opt=" + state.OptimizationLevel.ToString(),
+    "noPrelude=" + state.NoPrelude.ToString(),
+    bootstrapCodegen3ImportPath(dir),
+    codegen3SourceDigest(dir),
+  ])
+end
+
+func codegen3PackageInputKey(
+  sourceFingerprint: String,
+  dependencies: Slice[codegen3SummaryDependency]
+) -> String
+  let parts = dependencies.Map(func(dependency: codegen3SummaryDependency) -> String
+    dependency.Path + "|" + dependency.InputKey
+  end)
+  sort.Strings(parts)
+  codegen3HashParts([sourceFingerprint].Concat(parts))
+end
+
+func codegen3SummaryChecksum(summary: codegen3PackageSummary) -> String
+  let dependencies = summary.Dependencies.Map(func(dependency: codegen3SummaryDependency) -> String
+    dependency.Path + "|" + dependency.InputKey
+  end)
+  sort.Strings(dependencies)
+  codegen3HashParts([
+    summary.Format,
+    summary.SourceFingerprint,
+    summary.InputKey,
+    summary.PackageKey,
+    summary.PackagePath,
+    summary.Compiler,
+    summary.GoInputs,
+    summary.Optimization.ToString(),
+    summary.NoPrelude.ToString(),
+    summary.SourceDigest,
+  ].Concat(dependencies))
+end
+
+func codegen3SummaryPath(sourceFingerprint: String) -> String
+  let root = codegen3CacheRootPath()
+  if root == "" || sourceFingerprint.Len() < 2 then
+    ""
+  else
+    filepath.Join(
+      root,
+      "summaries",
+      sourceFingerprint.Slice(0, 2).UnwrapOr(""),
+      sourceFingerprint + ".json"
+    )
+  end
+end
+
+func codegen3ReadPackageSummary(sourceFingerprint: String) -> Option[codegen3PackageSummary]
+  let path = codegen3SummaryPath(sourceFingerprint)
+  if path == "" then
+    None
+  else
+    switch os.ReadFile(path)
+      case Err(_) => None
+      case Ok(raw) then
+        var summary = codegen3PackageSummary {
+          Format: "",
+          SourceFingerprint: "",
+          InputKey: "",
+          PackageKey: "",
+          PackagePath: "",
+          Compiler: "",
+          GoInputs: "",
+          Optimization: 0,
+          NoPrelude: false,
+          SourceDigest: "",
+          Dependencies: [],
+          Checksum: "",
+        }
+        switch json.Unmarshal(raw, Ref.new(summary))
+          case Err(_) => None
+          case Ok(_) then
+            if summary.Format != codegen3SummaryFormat ||
+              summary.SourceFingerprint != sourceFingerprint ||
+              summary.InputKey == "" ||
+              summary.PackageKey == "" ||
+              summary.Checksum == "" ||
+              codegen3SummaryChecksum(summary) != summary.Checksum then
+              None
+            elsif codegen3PackageInputKey(
+              sourceFingerprint,
+              summary.Dependencies
+            ) != summary.InputKey then
+              None
+            else
+              Some(summary)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+func codegen3HasPackageSummary(dir: String, state: BootstrapState) -> Bool
+  codegen3ReadPackageSummary(codegen3SourceFingerprint(dir, state)).IsSome()
+end
+
+func bootstrapReadCodegen3MetadataInputs(dir: String) -> Result[BootstrapInputs, Error]
+  go[Result[BootstrapInputs, Error]] {
+    code: "bootstrapOutcome(bootstrapReadMetadataInputs({dir}))"
+    in dir = dir
+  }
+end
+
+func codegen3MetadataInputs(
+  state: BootstrapState,
+  entry: String,
+  packagePath: String
+) -> Result[BootstrapInputs, Error]
+  let staged = filepath.Join(
+    state.BuildRoot,
+    "metadata",
+    codegen3HashBytes(entry as Slice[Byte])
+  )
+  switch os.MkdirAll(staged, 0o755 as os.FileMode)
+    case Err(err) => Err(err)
+    case Ok(_) then
+      switch codegen3CacheEmit(entry, staged)
+        case Err(err) => Err(err)
+        case Ok(_) =>
+          bootstrapAtomicWrite(
+            filepath.Join(staged, "go.mod"),
+            "module " + packagePath + "\n\ngo 1.24\n"
+          ).AndThen(func(ignored: ()) -> Result[BootstrapInputs, Error]
+            bootstrapReadCodegen3MetadataInputs(staged)
+          end)
+      end
+  end
+end
+end
+
+func codegen3WritePackageSummary(summary: codegen3PackageSummary) -> Result[(), Error]
+  let path = codegen3SummaryPath(summary.SourceFingerprint)
+  if path == "" then
+    Ok(())
+  else
+    switch os.MkdirAll(filepath.Dir(path), 0o755 as os.FileMode)
+      case Err(err) => Err(bootstrapContext("cache-summary", path, err))
+      case Ok(_) then
+        switch json.MarshalIndent(summary, "", "  ")
+          case Err(err) => Err(bootstrapContext("cache-summary", path, err))
+          case Ok(data) => bootstrapAtomicWrite(path, data as String)
+        end
+      end
+    end
+  end
+end
+
+func codegen3SummaryDependencyPaths(
+  state: BootstrapState,
+  inputs: BootstrapInputs
+) -> Slice[String]
+  let paths = bootstrapImportsFromSources(inputs.Sources).Fold(
+    [] as Slice[String],
+    func(acc: Slice[String], item: BootstrapImport) -> Slice[String]
+      if acc.Contains(item.Path) then
+        acc
+      else
+        acc.Append(item.Path)
+      end
+    end
+  )
+  if state.NoPrelude || paths.Contains("github.com/mygo-lang/mygo/prelude") then
+    paths
+  else
+    paths.Append("github.com/mygo-lang/mygo/prelude")
+  end
+end
+
+func codegen3SummaryDependencies(
+  dir: String,
+  state: BootstrapState,
+  inputs: BootstrapInputs
+) -> Result[Slice[codegen3SummaryDependency], Error]
+  let workspace = bootstrapWorkspaceRoot(dir)
+  switch codegen3SummaryDependenciesAt(
+    codegen3SummaryDependencyPaths(state, inputs),
+    0,
+    workspace,
+    dir,
+    state,
+    []
+  )
+    case Err(err) => Err(err)
+    case Ok(items) =>
+      Ok(items.SortedBy(func(left: codegen3SummaryDependency, right: codegen3SummaryDependency) -> Bool
+        left.Path < right.Path
+      end))
+  end
+end
+
+func codegen3SummaryDependenciesAt(
+  paths: Slice[String],
+  index: Int,
+  workspace: String,
+  dir: String,
+  state: BootstrapState,
+  out: Slice[codegen3SummaryDependency]
+) -> Result[Slice[codegen3SummaryDependency], Error]
+  if index >= paths.Len() then
+    Ok(out)
+  else
+    switch paths.Get(index)
+      case Some(path) then
+        switch bootstrapResolveImport(workspace, dir, path)
+          case Err(err) => Err(err)
+          case Ok(depDir) then
+            if depDir == dir then
+              codegen3SummaryDependenciesAt(paths, index + 1, workspace, dir, state, out)
+            else
+              let inputKey = state.PackageInputKeys.Get(depDir).UnwrapOr("")
+              if inputKey == "" then
+                Err(bootstrapAsError(ast2.NewDiagnostic(
+                  "cache-summary",
+                  "missing-dependency-key",
+                  "operation",
+                  "missing codegen3 input key for " + path
+                )))
+              else
+                codegen3SummaryDependenciesAt(
+                  paths,
+                  index + 1,
+                  workspace,
+                  dir,
+                  state,
+                  out.Append(codegen3SummaryDependency {
+                    Path: path,
+                    InputKey: inputKey,
+                  })
+                )
+              end
+            end
+          end
+        end
+      end
+      case None => Err(bootstrapAsError(ast2.NewDiagnostic(
+        "cache-summary",
+        "dependency-index",
+        "internal",
+        "missing summary dependency at index " + index.ToString()
+      )))
+    end
+  end
+end
+
+func codegen3PackageSummaryFor(
+  dir: String,
+  state: BootstrapState,
+  inputs: BootstrapInputs,
+  packageKey: String
+) -> Result[codegen3PackageSummary, Error]
+  let sourceFingerprint = codegen3SourceFingerprint(dir, state)
+  switch codegen3SummaryDependencies(dir, state, inputs)
+    case Err(err) => Err(err)
+    case Ok(dependencies) then
+      let inputKey = codegen3PackageInputKey(sourceFingerprint, dependencies)
+      let summary = codegen3PackageSummary {
+        Format: codegen3SummaryFormat,
+        SourceFingerprint: sourceFingerprint,
+        InputKey: inputKey,
+        PackageKey: packageKey,
+        PackagePath: bootstrapCodegen3ImportPath(dir),
+        Compiler: state.CompilerID,
+        GoInputs: state.GoInputsDigest,
+        Optimization: state.OptimizationLevel,
+        NoPrelude: state.NoPrelude,
+        SourceDigest: codegen3SourceDigest(dir),
+        Dependencies: dependencies,
+        Checksum: codegen3SummaryChecksum(codegen3PackageSummary {
+          Format: codegen3SummaryFormat,
+          SourceFingerprint: sourceFingerprint,
+          InputKey: inputKey,
+          PackageKey: packageKey,
+          PackagePath: bootstrapCodegen3ImportPath(dir),
+          Compiler: state.CompilerID,
+          GoInputs: state.GoInputsDigest,
+          Optimization: state.OptimizationLevel,
+          NoPrelude: state.NoPrelude,
+          SourceDigest: codegen3SourceDigest(dir),
+          Dependencies: dependencies,
+          Checksum: "",
+        }),
+      }
+      Ok(summary)
+    end
+  end
+end
+
+func codegen3ValidatePackageSummary(
+  dir: String,
+  state: BootstrapState,
+  summary: codegen3PackageSummary,
+  visiting: Map[String, Bool]
+) -> Bool
+  if visiting.Get(dir).UnwrapOr(false) then
+    true
+  elsif summary.Format != codegen3SummaryFormat ||
+    summary.SourceFingerprint != codegen3SourceFingerprint(dir, state) ||
+    summary.PackagePath != bootstrapCodegen3ImportPath(dir) ||
+    summary.Compiler != state.CompilerID ||
+    summary.GoInputs != state.GoInputsDigest ||
+    summary.Optimization != state.OptimizationLevel ||
+    summary.NoPrelude != state.NoPrelude ||
+    summary.SourceDigest != codegen3SourceDigest(dir) ||
+    summary.Checksum != codegen3SummaryChecksum(summary) then
+    false
+  else
+    visiting.Set(dir, true)
+    let valid = codegen3ValidateSummaryDependencies(
+      dir,
+      state,
+      summary.Dependencies,
+      0,
+      visiting
+    )
+    visiting.Delete(dir)
+    if valid then
+      state.PackageKeys.Set(dir, summary.PackageKey)
+      state.PackageInputKeys.Set(dir, summary.InputKey)
+      true
+    else
+      false
+    end
+  end
+end
+
+func codegen3ValidateSummaryDependencies(
+  dir: String,
+  state: BootstrapState,
+  dependencies: Slice[codegen3SummaryDependency],
+  index: Int,
+  visiting: Map[String, Bool]
+) -> Bool
+  if index >= dependencies.Len() then
+    true
+  else
+    switch dependencies.Get(index)
+      case Some(dependency) then
+        let workspace = bootstrapWorkspaceRoot(dir)
+        switch bootstrapResolveImport(workspace, dir, dependency.Path)
+          case Err(_) => false
+          case Ok(depDir) then
+            let fingerprint = codegen3SourceFingerprint(depDir, state)
+            switch codegen3ReadPackageSummary(fingerprint)
+              case None => false
+              case Some(depSummary) then
+                if depSummary.InputKey != dependency.InputKey then
+                  false
+                elsif !codegen3ValidatePackageSummary(depDir, state, depSummary, visiting) then
+                  false
+                else
+                  codegen3ValidateSummaryDependencies(
+                    dir,
+                    state,
+                    dependencies,
+                    index + 1,
+                    visiting
+                  )
+                end
+              end
+            end
+          end
+        end
+      end
+      case None => false
+    end
+  end
 end
 
 func codegen3EntryDir(key: String) -> String

@@ -35,6 +35,8 @@ $MYGO_CACHE/
     manifest.json
     zz_*.gen.go
     zz_*.gen_test.go
+    zz_mygo_metadata.gen.go
+  summaries/<xx>/<source-fingerprint>.json
   tmp/                 # per-build staging and the temporary overlay
   lock                 # shared/exclusive build lock
 ```
@@ -47,6 +49,12 @@ corrupt entries are ignored, removed, and regenerated.
 Entries are published by writing a temporary directory and renaming it into
 place. Concurrent writers of the same key converge on one complete entry; the
 loser discards its temporary copy.
+
+`zz_mygo_metadata.gen.go` is a metadata-only Go file stored in the cache. It
+lets the compiler recover a package's importer-facing declarations from a
+verified hit without reparsing its sources. It is not written beside the
+`.mygo` sources. `--codegen3-emit` includes it with the other generated files
+for IDE/debug materialization.
 
 ## Key
 
@@ -64,19 +72,42 @@ The key is a SHA-256 over, in a fixed order:
    toolchain version, target/build environment (`GOOS`, `GOARCH`, `GOAMD64`,
    `GOARM`, `CGO_ENABLED`, `GOFLAGS`, `GOEXPERIMENT`, `GOROOT`, and
    `GOTOOLCHAIN`).
+8. path-relative hashes of hand-written Go/native sources elsewhere in the
+   main module and of local `replace` targets.
 
 Absolute module roots, checkout locations, timestamps, and user names never
 enter the key. Two modules with identical sources, compiler, options, and
 dependencies share entries even when their module paths differ.
 
-After source parsing, dependency discovery and Go FFI collection, the compiler
-checks this key before type inference. A verified warm hit reuses generated
-files and skips inference and code generation for that package. Parsing and
-dependency discovery still run so diagnostics and dependency resolution remain
-current. A failed build cannot publish a cache entry, and edits to source,
-dependencies, compiler inputs, or the listed build environment produce a
-different key. Missing metadata files are not needed to form a key or build a
-package.
+## Summary inputs and early hits
+
+Before parsing, the compiler computes a cheap source fingerprint from the
+package identity, source digest, compiler identity, Go input digest, backend
+options, and summary format. The matching summary records the full dependency
+input keys and the generated-output key.
+
+A summary is reusable only when all of these still match:
+
+1. `.mygo` sources and non-generated Go files in the package directory;
+2. direct MyGO dependencies, recursively validated by their own summaries;
+3. the canonical prelude, unless `--no-prelude` is active;
+4. build/test source selection, including external `_test` packages;
+5. hand-written Go/native files in the main module and local `replace` targets;
+6. `go.mod`, `go.sum`, compiler identity, representation/adapter version;
+7. optimization level and Go target/build environment (`GOOS`, `GOARCH`,
+   `GOFLAGS`, `GOEXPERIMENT`, cgo, `GOROOT`, and toolchain selection).
+
+The summary's checksum covers all recorded fields. Missing, truncated, corrupt,
+incompatible, or stale summaries are ordinary misses and use the normal
+compilation path. A successful fallback repairs the summary for the next warm
+build.
+
+On a verified early hit, the compiler loads exported declarations from the
+cached metadata, reuses generated files, and skips full source parsing, Go FFI
+signature collection, type inference, IR lowering, optimization, and code
+generation for that package. The cache-on result is covered against cache-off
+behavior for changed local and transitive MyGO sources, public APIs, Go inputs,
+test sources, options, and corrupt records.
 
 ## Overlay
 
@@ -98,7 +129,8 @@ deleting anything. With `MYGO_CACHE=off`, cleaning is a successful no-op.
 
 ## Tests
 
-The compiler suite covers cross-module hits, cold/warm determinism, corrupt
-entry recovery, `MYGO_CACHE=off`, `--codegen3-emit`, cleaning, and the
-shared/exclusive lock interaction in
+The compiler suite covers early-hit stage counters, cold/warm determinism,
+corrupt summary fallback and repair, transitive invalidation, local Go input and
+`replace` invalidation, cross-module hits, `MYGO_CACHE=off`,
+`--codegen3-emit`, cleaning, and the shared/exclusive lock interaction in
 `internal/mygo/compiler/codegen3_cache_test.mygo`.

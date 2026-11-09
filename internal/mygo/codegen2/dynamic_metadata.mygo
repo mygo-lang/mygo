@@ -150,6 +150,26 @@ func dynamicMetadataSourceWithDeclsResult(
   end
 end
 
+# PackageMetadataSource exposes the same deterministic metadata record used by
+# codegen2 to other bootstrap backends. codegen3 stores it only inside cache
+# entries so a verified warm hit can recover importer-facing declarations
+# without reparsing the package.
+func PackageMetadataSource(
+  packageName: String,
+  importPath: String,
+  generated: Map[String, String],
+  decls: Slice[ast2.Decl],
+  dependencies: Slice[typeinference2.MyGoPackageInfo]
+) -> Result[String, Error]
+  dynamicMetadataSourceWithDeclsResult(
+    packageName,
+    importPath,
+    generated,
+    decls,
+    dependencies
+  )
+end
+
 func dynamicGeneratedSources(generated: Map[String, String]) -> Slice[metadata.GeneratedSource]
   generated.ToPairs().Filter(func(pair: (String, String)) -> Bool
     let (p0, _) = pair

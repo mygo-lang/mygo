@@ -50,6 +50,8 @@ struct BootstrapState
   CompilerID: String
   GoInputsDigest: String
   PackageKeys: Map[String, String]
+  PackageInputKeys: Map[String, String]
+  StageCounters: Map[String, Int]
 end
 
 # BootstrapInputs pairs the per-file codegen inputs with the decl sources that
@@ -101,6 +103,8 @@ func newBootstrapState(generateImportFiles: Bool, timing: Bool, noPrelude: Bool)
     CompilerID: "",
     GoInputsDigest: "",
     PackageKeys: {},
+    PackageInputKeys: {},
+    StageCounters: {},
   }
 end
 
@@ -132,6 +136,12 @@ func bootstrapTimingLog(state: BootstrapState, stage: String, dir: String, start
   else
     ()
   end
+end
+
+func bootstrapRecordStage(state: BootstrapState, stage: String) -> ()
+  let current = state.StageCounters.Get(stage).UnwrapOr(0)
+  state.StageCounters.Set(stage, current + 1)
+  ()
 end
 
 # Public bootstrap entry points.  The implementation below is intentionally
@@ -345,41 +355,44 @@ func compileAbsoluteBootstrapDir(
   if codegen then
     switch state.Compiled.Get(dir)
       case Some(files) => Ok(files)
-      case None then
-        switch state.Compiling.Get(dir)
-          case Some(v) then
-            if v then
-              bootstrapFilesFailure(
-                ast2.NewDiagnostic("import", "import-cycle", "source", "import cycle at " + dir),
-                ""
-              )
-            else
-              compileUncachedBootstrapDir(dir, state, true)
-            end
-          end
-          case _ => compileUncachedBootstrapDir(dir, state, true)
-        end
-      end
+      case None => compileMissingBootstrapDir(dir, state, true)
     end
   else
     switch state.SourcesCache.Get(dir)
       case Some(_) => Ok([])
-      case None then
-        switch state.Compiling.Get(dir)
-          case Some(v) then
-            if v then
-              bootstrapFilesFailure(
-                ast2.NewDiagnostic("import", "import-cycle", "source", "import cycle at " + dir),
-                ""
-              )
-            else
-              compileUncachedBootstrapDir(dir, state, false)
-            end
-          end
-          case _ => compileUncachedBootstrapDir(dir, state, false)
-        end
+      case None => compileMissingBootstrapDir(dir, state, false)
+    end
+  end
+end
+
+func compileMissingBootstrapDir(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Result[Slice[String], Error]
+  switch bootstrapTryCodegen3EarlyHit(dir, state, codegen)
+    case Some(result) => result
+    case None => compileMissingBootstrapDirAfterEarlyHit(dir, state, codegen)
+  end
+end
+
+func compileMissingBootstrapDirAfterEarlyHit(
+  dir: String,
+  state: BootstrapState,
+  codegen: Bool
+) -> Result[Slice[String], Error]
+  switch state.Compiling.Get(dir)
+    case Some(v) then
+      if v then
+        bootstrapFilesFailure(
+          ast2.NewDiagnostic("import", "import-cycle", "source", "import cycle at " + dir),
+          ""
+        )
+      else
+        compileUncachedBootstrapDir(dir, state, codegen)
       end
     end
+    case _ => compileUncachedBootstrapDir(dir, state, codegen)
   end
 end
 
@@ -408,6 +421,7 @@ func compileUncachedBootstrapDir(
       bootstrapFilesFailure(msg, "parse " + dir)
     end
     case Ok(inputs) then
+      bootstrapRecordStage(state, "parse")
       bootstrapTimingLog(state, "parser2", dir, parserStarted)
       let groups = bootstrapSplitTestInputs(inputs)
       let mainInputs = groups.Main
@@ -462,6 +476,7 @@ func compileUncachedBootstrapDir(
                     let sourceSets = appendBootstrapSources(packageSources, externalSources)
                     let packagesRef = Ref.new(bootstrapCollectGoPackages(sourceSets))
                     let ffiStarted = bootstrapTimingStart()
+                    bootstrapRecordStage(state, "ffi")
                     let initialPopulated = bootstrapPopulateGoSignatures(workspaceRoot, packagesRef)
                     switch initialPopulated
                       case Err(err) then
@@ -513,8 +528,15 @@ func compileUncachedBootstrapDir(
                                 # so a verified hit can skip repeated type
                                 # inference as well as code generation.
                                 if state.Codegen3 then
-                                  bootstrapAssignPackageKey(dir, state, mainInputs)
-                                  if codegen && state.CacheEnabled then
+                                  bootstrapAssignPackageKey(
+                                    dir,
+                                    state,
+                                    mainInputs,
+                                    groups.ExternalTest
+                                  )
+                                  if codegen &&
+                                    state.CacheEnabled &&
+                                    codegen3HasPackageSummary(dir, state) then
                                     let key = state.PackageKeys.Get(dir).UnwrapOr("")
                                     let entry = if key == "" => "" else codegen3CacheLookup(key)
                                     if entry != "" then
