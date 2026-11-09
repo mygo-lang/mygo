@@ -106,17 +106,29 @@ Each generated Go file SHALL import exactly the packages it references. It SHALL
 - **WHEN** a generated declaration calls a prelude-provided helper
 - **THEN** the generated file imports the prelude package
 
-### Requirement: No metadata artifact is emitted
+### Requirement: Importer metadata is verified and safely staged
 
-codegen3 SHALL NOT emit a package metadata file. Cross-package declarations and dynamic-dispatch information SHALL be derived from source declarations compiled in the same build.
+codegen3 SHALL derive importer-facing metadata from the compiled package and MAY emit it alongside generated output under the active contained build or cache root. The compiler SHALL use cached dependency information for inference only after verifying its compatibility, integrity, completeness, source and dependency inputs. Signature-only metadata SHALL NOT be treated as a complete typed dependency. If cached information cannot be trusted or does not cover the requested inputs, the compiler SHALL use the correct current source-based compilation path. Reuse MUST preserve cross-package declarations, inherent methods, instances, dynamic dispatch and diagnostics, and MUST NOT override editor overlays.
 
-#### Scenario: No metadata file is produced
-- **WHEN** a package is compiled by codegen3
-- **THEN** no `zz_mygo_metadata.gen.go` or equivalent metadata artifact is written
+#### Scenario: Verified metadata supplies a dependency
+- **WHEN** a dependency's generated output and importer metadata are compatible, complete and verified for the current inputs
+- **THEN** an importer can obtain equivalent declarations and dynamic-dispatch information from that metadata
 
-#### Scenario: Dependencies are source-derived
-- **WHEN** a package imports another MyGO package
-- **THEN** the importing build obtains that package's declarations from source rather than a metadata file
+#### Scenario: Invalid metadata falls back to sources
+- **WHEN** metadata is missing, corrupt, incompatible or stale
+- **THEN** the compiler uses current source-derived declarations and does not consume the untrusted metadata
+
+#### Scenario: Signature-only metadata cannot seed inference
+- **WHEN** cached metadata contains exported signatures but lacks complete typed method or instance information for a dependency needed by inference
+- **THEN** the compiler uses current source-derived declarations and does not infer placeholder function bodies or binding values
+
+#### Scenario: Cached dependency retains diagnostic locations
+- **WHEN** an importer uses a verified typed dependency from a different checkout of the same source
+- **THEN** diagnostics retain the source paths, lines and columns appropriate to that checkout
+
+#### Scenario: Metadata remains contained
+- **WHEN** codegen3 emits or stages metadata
+- **THEN** it remains under the active build or cache output root and does not create generated files in the source checkout
 
 ### Requirement: FFI and dynamic dispatch remain functional
 
