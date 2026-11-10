@@ -96,21 +96,12 @@ Sync and build use the self-hosted bootstrap pipeline by default:
 go run ./cmd/mygo sync internal/mygo
 ```
 
-See [docs/compiler2/core.md](docs/compiler2/core.md) for the differences
-between the legacy pipeline and the self-hosted parser/typechecker/codegen
-pipeline.
+See [docs/compiler2/core.md](docs/compiler2/core.md) for the self-hosted
+parser2, typeinference2, and codegen2 pipeline.
 
-Existing `--bootstrap` commands remain supported. To generate through the
-legacy pipeline, use `--legacy sync`; the flag is only supported for sync.
-For a legacy build, generate first and then invoke Go directly:
-
-```bash
-./mygo --legacy sync examples/main
-go build ./examples/main
-```
-
-Do not combine `--legacy` with `--bootstrap` or `--bootstrap-timing`.
-Bootstrap compilation failures are reported without an automatic legacy fallback.
+Existing `--bootstrap` commands remain supported as a compatibility alias, and
+`--bootstrap-timing` prints the stage durations. Compilation failures are
+reported without a fallback to another pipeline.
 
 See [docs/compiler/dynamic-typeclass-values.md](docs/compiler/dynamic-typeclass-values.md)
 for generated dynamic typeclass value APIs and dependency metadata behavior.

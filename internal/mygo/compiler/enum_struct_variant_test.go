@@ -20,9 +20,9 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CompileDir(dir)
-	if err == nil || !strings.Contains(err.Error(), `duplicate field "x" in enum Point variant Origin`) {
-		t.Fatalf("CompileDir() error = %v, want duplicate field", err)
+	_, err := CompileDirBootstrap(dir)
+	if err == nil || !strings.Contains(err.Error(), "enum Point: variant Origin declares field x more than once") {
+		t.Fatalf("CompileDirBootstrap() error = %v, want duplicate field", err)
 	}
 }
 
@@ -44,9 +44,9 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CompileDir(dir)
-	if err == nil || !strings.Contains(err.Error(), `enum Shape variant Circle has no field "radus"`) {
-		t.Fatalf("CompileDir() error = %v, want unknown field", err)
+	_, err := CompileDirBootstrap(dir)
+	if err == nil || !strings.Contains(err.Error(), "variant has no field radus") {
+		t.Fatalf("CompileDirBootstrap() error = %v, want unknown field", err)
 	}
 }
 
@@ -68,13 +68,13 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CompileDir(dir)
-	if err == nil || (!strings.Contains(err.Error(), "field \"radius\" specified more than once") && !strings.Contains(err.Error(), "pattern binds \"radius\" more than once")) {
-		t.Fatalf("CompileDir() error = %v, want duplicate binding", err)
+	_, err := CompileDirBootstrap(dir)
+	if err == nil || !strings.Contains(err.Error(), "pattern binds radius more than once") {
+		t.Fatalf("CompileDirBootstrap() error = %v, want duplicate binding", err)
 	}
 }
 
-func TestCompileDirNoPreludeNamedStructEnumVariants(t *testing.T) {
+func TestSyncBootstrapNoPreludeNamedStructEnumVariants(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
 	source := `package sample
@@ -100,8 +100,8 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CompileDirNoPrelude(dir); err != nil {
-		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	if _, err := SyncBootstrapNoPrelude(dir); err != nil {
+		t.Fatalf("SyncBootstrapNoPrelude() error = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
 
@@ -124,7 +124,7 @@ func TestCombinedArea(t *testing.T) {
 	}
 }
 
-func TestCompileDirNoPreludeLowersTupleStructVariantPatterns(t *testing.T) {
+func TestSyncBootstrapNoPreludeLowersTupleStructVariantPatterns(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
 	source := `package sample
@@ -152,8 +152,8 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CompileDirNoPrelude(dir); err != nil {
-		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	if _, err := SyncBootstrapNoPrelude(dir); err != nil {
+		t.Fatalf("SyncBootstrapNoPrelude() error = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
 
@@ -178,7 +178,7 @@ func TestTupleStructVariant(t *testing.T) {
 	}
 }
 
-func TestCompileDirNoPreludeResolvesQualifiedNamedVariantWithCollidingName(t *testing.T) {
+func TestSyncBootstrapNoPreludeResolvesQualifiedNamedVariantWithCollidingName(t *testing.T) {
 	dir := t.TempDir()
 	bootstrapTestModule(t, dir)
 	source := `package sample
@@ -216,8 +216,8 @@ end
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CompileDirNoPrelude(dir); err != nil {
-		t.Fatalf("CompileDirNoPrelude() error = %v", err)
+	if _, err := SyncBootstrapNoPrelude(dir); err != nil {
+		t.Fatalf("SyncBootstrapNoPrelude() error = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "sample_test.go"), []byte(`package sample
 

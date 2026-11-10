@@ -273,18 +273,15 @@ let (result, err) = goFuncReturningTwoValues()
 
 ### Implementation
 
-- `isGoMultiReturnTypeString()` detects Go-style multi-return type strings (parenthesized, e.g., `(int, error)`).
-- `emitMultiReturnBindPattern()` generates `result, err := goFunc()` directly using `jen.List()` for the left-hand side.
-- Nested tuple patterns (e.g., `(a, (b, c))`) first bind the outer multi-return, then destructure inner tuples via `emitBindPattern`.
+- Codegen2 detects Go-style multi-return types (parenthesized, e.g., `(int, error)`) and emits `result, err := goFunc()` directly.
+- Nested tuple patterns (e.g., `(a, (b, c))`) bind the outer multi-return first, then destructure inner tuples.
 - `_` slots are supported: `let (result, _) = goFunc()`.
-- Applies in both `translateBlock` (statement position) and `translateFunctionBlock` (return expression position).
+- The lowering applies in statement and return-expression positions.
 
-### Parser changes (`parser.y`)
+### Parser (parser2)
 
-- Added `currentParamsStack` (`[][]ast.Param`) to the parser struct for nested func lit parameter isolation.
-- `func_lit` rule now pushes/pops `currentParamsStack` on entry/exit, preventing parameter leakage between nested function literals.
-- `param` rule added `p.expectTypeSuffix = true` before the type to correctly trigger type-suffix parsing.
-- `qualified_name` now also accepts `NUMBER` (for qualified numeric type names).
+Parser2 owns function-literal parameter isolation and qualified numeric type syntax. See
+`internal/mygo/parser2/syntax_parse_expressions.mygo` and `syntax_parse_types_patterns.mygo`.
 
 ## Pattern Matching (`switch`/`case`)
 
@@ -298,10 +295,10 @@ end
 ```
 Commas between cases are optional (Rust/Scala style).
 
-### Parser (`parser.y`)
-- `switch_case_separator` consumes an optional comma after each case body before the next `case` or `end`.
+### Parser (parser2)
+- A switch case may be followed by an optional comma before the next `case` or `end`.
 
-### Go Backend (`compiler/translate_control.go`)
+### Go Backend (codegen2)
 - `translateSwitch()` emits if-else chains with type assertions instead of Go `switch x.(type)`:
   ```go
   if v, ok := target.(Option__Some[A]); ok {
@@ -385,33 +382,26 @@ pattern mismatch: the next case is attempted and the guarded bindings do not
 escape. Guards are allowed on any switch target and on `_`; a guarded `_` is
 not an unconditional catch-all. Switches containing a guard use a matched-arm
 dispatch so tuple and nested patterns fall through to the next case without
-duplicating the remaining arms. The legacy `--legacy sync` pipeline reports
-case guards as unsupported.
+duplicating the remaining arms.
 
-### HM Type Inference (`internal/mygo/typeinference/`)
+### HM Type Inference (`internal/mygo/typeinference2/`)
 - `InferState` gains `PkgInfo` field for enum variant lookup during pattern inference.
 - `inferSwitch()` extends each case body's environment with pattern bindings from the matched variant's fields.
 - Field types are resolved by substituting the target enum's type parameters with the concrete type arguments.
 - Helper functions: `resolveEnumType()`, `lookupEnum()`, `findEnumVariant()`, `substituteTypeParams()`.
 
-### Tests
-- `TestTranslateSwitchUsesIfElse` (3 subtests): expression form with variant patterns, wildcard pattern, statement form (no expected type).
-- `TestE2ESwitchGeneratedCodeIsValidGo`: full compiler pipeline produces valid Go syntax verified by `go/parser`.
-
 ## New Block Syntax (`if =>` / `if then...elsif...end` / `case then...end`)
 
-Per MIGRATE.md "新语句块方案", the yacc parser supports:
+Parser2 supports:
 
 - **`if cond => a else b`** — inline if with `=>`; chains are written as `if cond1 => a else if cond2 => b else c`.
 - **`if cond then ... elsif cond then ... else ... end`** — block if form with zero or more `elsif` branches.
 - **`case pattern then ... end`** — switch case block form, added as `CASE pattern THEN block_expr ... END`.
 - Inline `if cond then a else b` and bare block `if cond ... else ... end` are no longer accepted.
 
-### Parser changes
-- `parser.y`: `if_expr` now accepts arrow inline form and `then` block form with `elsif`; `switch_case` accepts both arrow and `then...end` case bodies.
-- `parser.go`: regenerated via `goyacc` from `parser.y`.
-- `lex.yy.go` / `parser_lex.l`: regenerated/updated for the `elsif` keyword.
-- `parser_test.go`: covers arrow `else if` chains, block `elsif`, and switch case block forms.
+### Parser (parser2)
+- Parser2 accepts the arrow inline form and the `then` block form with `elsif`; a switch case accepts both arrow and `then...end` bodies.
+- See `internal/mygo/parser2/syntax_parse_expressions.mygo` and `syntax_parse_declarations.mygo`.
 
 ## Function Declaration Multiline Support
 
@@ -455,19 +445,10 @@ end
 
 The same multiline support applies to interface method signatures (`func_sig`) and function literals (`func_lit`).
 
-### Parser changes (`parser.y`)
+### Parser (parser2)
+- Parser2 accepts multiline parameter lists, a return type on the next line, a `using` clause on its own line, and trailing commas in parameter, type, expression, struct, collection, and tuple lists.
+- See `internal/mygo/parser2/syntax_parse_expressions.mygo` and `syntax_parse_types_patterns.mygo`.
 
-- **`%type <token> opt_newlines`** — added type declaration so `opt_newlines` can appear between action blocks.
-- **`opt_newlines`** — added `$$` assignments for both alternatives (`/* empty */` and `opt_newlines NEWLINE`).
-- **`func_decl` / `func_sig`** — added `opt_newlines` between `opt_type_params`/`LPAREN`, `LPAREN`/`maybe_param_list`, `RPAREN`/`ARROW`, and `type`/`opt_using_clause`.
-- **`func_decl` body** — added `opt_newlines` before `opt_using_clause`.
-- **`maybe_param_list`** — changed `param_list` branch to `opt_newlines param_list opt_newlines`, allowing leading/trailing blank lines around the parameter list.
-- **`param_list`** — added `opt_newlines` around `COMMA`, and added a `param_list opt_newlines COMMA` branch to support trailing commas.
-- **Trailing commas** — added trailing-comma support to ``type_list``, ``expr_list``, ``struct_fields``, ``struct_field_list``, ``collection_entries``, and ``tuple_expr_elems``. This allows a trailing comma after the last element in type arguments, function calls, struct declarations, struct literals, slice/map/set literals, and tuple literals.
-- **`func_lit`** — added `opt_newlines` between `LPAREN`/`maybe_param_list`, `maybe_param_list`/`RPAREN`, `RPAREN`/`ARROW`, and `type`/`block_expr`.
-- Regenerated `parser.go` via `goyacc` from `parser.y`.
-- `lex.yy.go` / `parser_lex.l`: unchanged (multiline support is a grammar-only change).
-- New test: `TestParseFileMultilineFuncDecl` covering all multiline scenarios.
 ## Expression Continuation and Long-Expression Layout
 
 An expression may span several lines. A line continues onto the following line in

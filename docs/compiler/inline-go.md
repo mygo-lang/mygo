@@ -26,11 +26,10 @@
     type V = Int
   }
   ```
-- The AST node is `GoExpr{Result TypeExpr, Code string, Operands []GoOperand, TypeOperands []GoTypeOperand}` in `internal/mygo/ast/ast.go`. `GoTypeOperand{Name string, Type TypeExpr}` carries type bindings.
-- Parser ownership lives in `internal/mygo/parser/parser.y`; `go`, `in`, and `type` (within go blocks) are lexer keywords.
-- The `Lex` function in `parser.y` maps `"type"` to the `TYPE` token so it's recognized as a keyword inside go blocks.
-- HM inference (`internal/mygo/typeinference/infer.go`) infers every operand expression normally, then assigns the explicit result type from `go[T]`.
-- Compiler lowering lives in `internal/mygo/compiler/translate_go.go`. It renders each operand to Go (value operands as expressions, type operands via `goType`), substitutes `{name}` placeholders in the raw snippet, and returns an empty type for `go[()]` so statement lowering treats it as a statement.
+- The AST node is `InlineGoExpr(Type, Code, Operands, TypeOperands, RawType)` in `internal/mygo/ast2/ast2.mygo`. `GoOperand` and `GoTypeOperand` carry the value and type bindings.
+- Parser ownership lives in `internal/mygo/parser2/syntax_parse_expressions.mygo`; `parseInlineGoExpr` builds the CST and `parseInlineGoBodyItems` groups the `code:`, `in`, and `type` entries.
+- Type inference lives in `internal/mygo/typeinference2/infer.mygo`. It infers every operand expression normally, then assigns the explicit result type from `go[T]`.
+- Codegen2 lowering lives in `internal/mygo/codegen2/translate_ast.mygo`. It renders each operand to Go (value operands as expressions, type operands via the Go type mapping), substitutes `{name}` placeholders in the raw snippet, and treats `go[()]` as a statement.
 - Inline Go type operands automatically translate MyGO types (like `Int`, `String`, `Slice[Int]`, `Map[String, Bool]`) to their corresponding Go type representations (like `int`, `string`, `[]int`, `map[string]bool`).
 - Keep inline Go examples small and boundary-focused. Prefer ordinary MyGO, Go FFI imports, `Ref.new`, `Option`, and `Result` when those can express the behavior without raw Go.
 
@@ -80,28 +79,9 @@ Supported `(target, raw)` pairs:
   selected ABI: canonical `Option[Ref[U]]` is the pointer itself, while
   `Option[U]` / `Result` use `Option__Some` / `Result__Ok` helpers;
   a legacy prelude uses `Some` / `None` / `Ok` / `Err`.
-- `--legacy` does not implement `raw:`.
-
-### `goExprCode` — Auto jen.Code Generation
-
-`goExprCode()` in `translate_go.go` parses simple Go expressions from the `code:` string into proper `jen.Code` structures, improving code generation quality:
-
-| Pattern | Regex | Generated jen.Code |
-|---------|-------|-------------------|
-| Simple call | `fn(arg)` | `jen.Id("fn").Call(jen.Id("arg"))` |
-| Slice from | `arr[:]` | `jen.Id("arr").Index(jen.Id("x").Op(":"))` |
-| Len comparison | `arr[:len(arr)] == x` | `jen.Id("arr").Index(jen.Op(":").Add(jen.Len(jen.Id("arr")))).Op("==").Id("x")` |
-
-- Uses three regex patterns: `goSimpleCallRE`, `goSliceFromRE`, `goSliceToLenEqRE`.
-- `goCalleeCode()` handles Go built-in callable types (`string`, `int`, `bool`) as `jen.String()`, `jen.Int()`, `jen.Bool()` instead of `jen.Id("string")`.
-- Non-matching expressions fall back to `jen.Id(src)` as a raw identifier.
-- This replaces the old behavior where all inline Go code strings were emitted as raw `jen.Id(substituted)`, which broke function calls and slice operations.
-
 ### Key Files
 
-- **AST**: `internal/mygo/ast/ast.go` — `GoExpr`, `GoOperand`, `GoTypeOperand`.
-- **Lexer**: `internal/mygo/parser/parser_lex.l` — `type` keyword → `TYPE` token.
-- **Lexer runtime**: `internal/mygo/parser/parser_lexer.go` — `nextToken()` maps `TYPE` to `tokKeyword`.
-- **Parser grammar**: `internal/mygo/parser/parser.y` — `go_expr`, `go_field_list`, `go_operand`, `go_type_operand` rules.
-- **Parser state**: `internal/mygo/parser/parser_state.go` — `currentGoTypeOperands` accumulator.
-- **Compiler**: `internal/mygo/compiler/translate_go.go` — `translateGoExpr()` resolves both `GoOperand` and `GoTypeOperand` via `g.goType()`.
+- **AST**: `internal/mygo/ast2/ast2.mygo` — `InlineGoExpr`, `GoOperand`, `GoTypeOperand`.
+- **Parser**: `internal/mygo/parser2/syntax_parse_expressions.mygo` — `parseInlineGoExpr()`, `parseInlineGoBodyItems()`.
+- **Inference**: `internal/mygo/typeinference2/infer.mygo` — the `InlineGoExpr` case.
+- **Codegen2**: `internal/mygo/codegen2/translate_ast.mygo` — inline Go expression and statement lowering.

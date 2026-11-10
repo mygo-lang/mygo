@@ -14,7 +14,7 @@ func compileSourceWithPrelude(t *testing.T, source string) error {
 	if err := os.WriteFile(filepath.Join(dir, "sample.mygo"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CompileDir(dir)
+	_, err := CompileDirBootstrap(dir)
 	return err
 }
 
@@ -36,7 +36,7 @@ end
 `
 	err := compileSourceWithPrelude(t, source)
 	if err == nil || !strings.Contains(err.Error(), "non-exhaustive switch: missing variant(s) Blue") {
-		t.Fatalf("CompileDir() error = %v, want missing Blue variant error", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want missing Blue variant error", err)
 	}
 }
 
@@ -58,7 +58,7 @@ func describe(c: Color) -> Int
 end
 `
 	if err := compileSourceWithPrelude(t, source); err != nil {
-		t.Fatalf("CompileDir() error = %v, want success", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want success", err)
 	}
 }
 
@@ -79,7 +79,7 @@ func describe(c: Color) -> Int
 end
 `
 	if err := compileSourceWithPrelude(t, source); err != nil {
-		t.Fatalf("CompileDir() error = %v, want wildcard to satisfy exhaustiveness", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want wildcard to satisfy exhaustiveness", err)
 	}
 }
 
@@ -101,7 +101,7 @@ end
 `
 	err := compileSourceWithPrelude(t, source)
 	if err == nil || !strings.Contains(err.Error(), "non-exhaustive switch: missing variant(s) Blue") {
-		t.Fatalf("CompileDir() error = %v, want missing Blue variant error in nested tuple", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want missing Blue variant error in nested tuple", err)
 	}
 }
 
@@ -122,7 +122,7 @@ func f(pair: (Color, Int)) -> Int
 end
 `
 	if err := compileSourceWithPrelude(t, source); err != nil {
-		t.Fatalf("CompileDir() error = %v, want wildcard to satisfy exhaustiveness in nested tuple", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want wildcard to satisfy exhaustiveness in nested tuple", err)
 	}
 }
 
@@ -137,7 +137,7 @@ func describe(x: Int) -> Int
 end
 `
 	if err := compileSourceWithPrelude(t, source); err != nil {
-		t.Fatalf("CompileDir() error = %v, want non-enum switch to skip exhaustiveness", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want non-enum switch to skip exhaustiveness", err)
 	}
 }
 
@@ -161,7 +161,7 @@ end
 `
 	err := compileSourceWithPrelude(t, source)
 	if err == nil || !strings.Contains(err.Error(), "non-exhaustive switch: missing variant(s) Blue") {
-		t.Fatalf("CompileDir() error = %v, want missing Blue variant error in statement switch", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want missing Blue variant error in statement switch", err)
 	}
 }
 
@@ -184,6 +184,6 @@ func describe(c: Color) -> Int
 end
 `
 	if err := compileSourceWithPrelude(t, source); err != nil {
-		t.Fatalf("CompileDir() error = %v, want wildcard to satisfy exhaustiveness in statement switch", err)
+		t.Fatalf("CompileDirBootstrap() error = %v, want wildcard to satisfy exhaustiveness in statement switch", err)
 	}
 }

@@ -48,13 +48,9 @@
 
 ## Potential Improvements
 
-### Parser & Lexer
-
-- **Yacc conflicts**: `parser.y` has ~39 shift/reduce + 5 reduce/reduce conflicts (pre-existing, by design). These should be documented and reviewed periodically to ensure they don't cause unexpected parsing behavior.
-
 ### Type System
 
-- **Numeric type coverage**: While `Int8`, `Int16`, `Int32`, `UInt8`, `UInt16`, `UInt32`, `Float32` are now supported, ensure all compiler passes (type inference, codegen, Jennifer generation) maintain consistent coverage when new types are added.
+- **Numeric type coverage**: While `Int8`, `Int16`, `Int32`, `UInt8`, `UInt16`, `UInt32`, `Float32` are now supported, ensure all compiler passes (type inference and codegen) maintain consistent coverage when new types are added.
 
 ### Collection Types
 

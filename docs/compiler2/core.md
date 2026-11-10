@@ -25,23 +25,21 @@ The backends have separate generated-Go ABIs. Codegen2 continues to emit the
 legacy interface-based ADT representation. Codegen3 emits the canonical tagged
 representations and never mixes its output with codegen2 within one package.
 
-It is deliberately separate from the legacy compiler path:
+The pipeline is implemented by:
 
-| Legacy compiler | Bootstrap compiler | Notes |
-| --- | --- | --- |
-| `internal/mygo/parser` (yacc + Go) | `internal/mygo/parser2` (parsec + MyGO) | parser2 is the self-host parser |
-| `internal/mygo/ast` (Go types) | `internal/mygo/ast2` (MyGO types) | ast2 is the compact AST shared by the bootstrap pipeline |
-| `internal/mygo/typeinference` (Go) | `internal/mygo/typeinference2` (MyGO) | HM/Scheme-based inference over ast2 |
-| `internal/mygo/codegen` (Go) | `internal/mygo/codegen2` (MyGO) | AST-to-Go lowering using `internal/mygo/codegen2/goast` |
-| n/a | `internal/mygo/codegen3` (MyGO) | Opt-in IR-to-Go backend with canonical ADTs |
+| Component | Role |
+| --- | --- |
+| `internal/mygo/parser2` (parsec + MyGO) | self-host parser |
+| `internal/mygo/ast2` (MyGO) | compact AST shared by the pipeline |
+| `internal/mygo/typeinference2` (MyGO) | HM/Scheme-based inference over ast2 |
+| `internal/mygo/codegen2` (MyGO) | AST-to-Go lowering using `internal/mygo/codegen2/goast`; default backend |
+| `internal/mygo/codegen3` (MyGO) | opt-in IR-to-Go backend with canonical ADTs |
 
-The bootstrap pipeline with codegen2 is the CLI default for sync and build.
-`--bootstrap`
-remains a compatibility alias. Legacy generation requires `--legacy sync`;
-`--legacy` is rejected for build and fmt and cannot be combined with either
-bootstrap flag. Compilation errors do not trigger an automatic legacy fallback.
-The Go APIs retain their existing pipeline semantics: `Sync` and `CompileDir`
-use legacy, while the explicitly named bootstrap APIs use bootstrap.
+The codegen2 pipeline is the CLI default for sync and build. `--bootstrap`
+remains a compatibility alias, and `--bootstrap-timing` prints stage durations.
+Compilation errors are reported without a fallback. The Go APIs expose the
+bootstrap entry points `SyncBootstrap` and `CompileDirBootstrap`, together with
+their available no-prelude, options, and timing variants.
 
 ## Commands
 

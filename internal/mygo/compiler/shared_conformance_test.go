@@ -169,16 +169,13 @@ end
 
 func TestSharedConformanceFixtures(t *testing.T) {
 	for _, fixture := range sharedConformanceFixtures {
-		t.Run(fixture.name+"/production", func(t *testing.T) {
-			runSharedConformanceFixture(t, fixture, false)
-		})
-		t.Run(fixture.name+"/bootstrap", func(t *testing.T) {
-			runSharedConformanceFixture(t, fixture, true)
+		t.Run(fixture.name, func(t *testing.T) {
+			runSharedConformanceFixture(t, fixture)
 		})
 	}
 }
 
-func runSharedConformanceFixture(t *testing.T, fixture sharedConformanceFixture, bootstrap bool) {
+func runSharedConformanceFixture(t *testing.T, fixture sharedConformanceFixture) {
 	t.Helper()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/conformance\n\ngo 1.26.10\n"), 0o644); err != nil {
@@ -187,12 +184,7 @@ func runSharedConformanceFixture(t *testing.T, fixture sharedConformanceFixture,
 	if err := os.WriteFile(filepath.Join(dir, "main.mygo"), []byte(fixture.source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	var err error
-	if bootstrap {
-		_, err = SyncBootstrapNoPrelude(dir)
-	} else {
-		_, err = CompileDirNoPrelude(dir)
-	}
+	_, err := SyncBootstrapNoPrelude(dir)
 	if fixture.wantError != "" {
 		if err == nil {
 			t.Fatalf("compilation succeeded, want error %q", fixture.wantError)

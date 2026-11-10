@@ -1,19 +1,16 @@
-# bootstrap 与语言规范的差异
+# compiler2 实现说明
 
-[`docs/spec.md`](../spec.md) 是语言行为的权威契约。本文档记录 legacy 编译链与
-自举编译链 `parser2 -> ast2 -> typeinference2 -> codegen2` 之间有意保留的差异。
+[`docs/spec.md`](../spec.md) 是语言行为的权威契约。本文档记录自托管
+`parser2 -> ast2 -> typeinference2 -> codegen2` 管线的实现说明。
 
 ## 当前状态
 
-在共享一致性 fixture 与 bootstrap 工作流测试所覆盖的对齐范围内，不再存在
-已确认的源码语言或编译工作流差异。
+共享一致性 fixture 与 bootstrap 工作流测试覆盖了管线的行为范围。
 
-## 有意保留的差异
+## 实现说明
 
-- 两条编译链是刻意独立实现；生成的 Go 标识符、字典参数、蹦床位置等降低细节
-  可能不同。这些是实现细节，不构成语言差异。
-- bootstrap 不保证生成与 legacy 链字节完全相同的 Go。
-- 若观察到行为差异，以 `docs/spec.md` 的语言契约为准；不应把 bootstrap
-  行为解释为新的语言承诺。
+- 生成的 Go 标识符、字典参数、蹦床位置等降低细节属于实现细节，不构成语言差异。
+- 生成 Go 不保证在不同编译器版本或后端之间字节完全一致。
+- 若观察到行为差异，以 `docs/spec.md` 的语言契约为准。
 
-bootstrap 的验证命令见 [`core.md`](core.md)。
+编译器验证命令见 [`core.md`](core.md)。

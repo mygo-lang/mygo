@@ -101,14 +101,11 @@ func TestPipelineSelection(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		flags  []string
-		legacy bool
 		timing bool
 	}{
 		{name: "default"},
 		{name: "explicit", flags: []string{"--bootstrap"}},
-		{name: "legacy", flags: []string{"--legacy"}, legacy: true},
 		{name: "no-prelude", flags: []string{"--no-prelude"}},
-		{name: "legacy-no-prelude", flags: []string{"--legacy", "--no-prelude"}, legacy: true},
 		{name: "timing", flags: []string{"--bootstrap-timing"}, timing: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,10 +117,9 @@ func TestPipelineSelection(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(dir, "zz_main.gen.go")); err != nil {
 				t.Fatal(err)
 			}
-			// Bootstrap emits dynamic API metadata; legacy does not.
 			_, err := os.Stat(filepath.Join(dir, "zz_mygo_metadata.gen.go"))
-			if (!tc.legacy && err != nil) || (tc.legacy && !os.IsNotExist(err)) {
-				t.Fatalf("unexpected pipeline metadata: %v", err)
+			if err != nil {
+				t.Fatalf("missing pipeline metadata: %v", err)
 			}
 			seen := map[string]bool{}
 			for _, path := range strings.Fields(out) {
@@ -171,10 +167,7 @@ func TestPipelineCLITestCommand(t *testing.T) {
 
 func TestPipelineInvalidFlags(t *testing.T) {
 	for _, flags := range [][]string{
-		{"--legacy", "--bootstrap", "sync"},
-		{"--bootstrap", "--legacy", "sync"},
-		{"--legacy", "--bootstrap-timing", "sync"},
-		{"--bootstrap-timing", "--legacy", "sync"},
+		{"--legacy", "sync"},
 		{"--legacy", "build"},
 		{"--legacy", "fmt", "main.mygo"},
 	} {
@@ -182,7 +175,7 @@ func TestPipelineInvalidFlags(t *testing.T) {
 			const source = "package main\nfunc main() -> ()\n    ()\nend\n"
 			dir := pipelinePackage(t, source)
 			_, stderr, code := pipelineCLI(t, dir, flags...)
-			if code != 2 || !strings.Contains(stderr, "--legacy") {
+			if code != 2 || !strings.Contains(stderr, "usage: mygo") {
 				t.Fatalf("exit %d: %s", code, stderr)
 			}
 			entries, err := os.ReadDir(dir)
@@ -249,9 +242,12 @@ func TestPipelineUsage(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("exit %d", code)
 	}
-	for _, text := range []string{"bootstrap pipeline by default", "sync only", "compatibility alias"} {
+	for _, text := range []string{"bootstrap pipeline by default", "compatibility alias"} {
 		if !strings.Contains(stderr, text) {
 			t.Fatalf("usage missing %q: %s", text, stderr)
 		}
+	}
+	if strings.Contains(stderr, "--legacy") {
+		t.Fatalf("usage still mentions --legacy: %s", stderr)
 	}
 }

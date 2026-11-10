@@ -1,5 +1,10 @@
 # inference.md — HM type inference, unary ops, empty set inference
 
+> Historical note: this document describes the retired
+> `parser` -> `typeinference` -> `codegen` pipeline. The current compiler is
+> described in [compiler2/core.md](../compiler2/core.md); the language contract
+> is [docs/spec.md](../spec.md).
+
 ## HM Type Inference (`internal/mygo/typeinference/`)
 
 A Hindley-Milner (Algorithm W) type inference pass implementing Haskell 98 core HM + typeclass constraints, added as a pre-pass before Go code generation.

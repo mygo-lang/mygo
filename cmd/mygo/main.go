@@ -22,8 +22,6 @@ func main() {
 	}
 
 	noPrelude := false
-	bootstrap := false
-	legacy := false
 	bootstrapTiming := false
 	pipelineOptions := compiler.PipelineOptions{OptimizationLevel: 2}
 	args := os.Args[1:]
@@ -34,13 +32,8 @@ func main() {
 			pipelineOptions.NoPrelude = true
 			args = args[1:]
 		case args[0] == "--bootstrap":
-			bootstrap = true
-			args = args[1:]
-		case args[0] == "--legacy":
-			legacy = true
 			args = args[1:]
 		case args[0] == "--bootstrap-timing":
-			bootstrap = true
 			bootstrapTiming = true
 			args = args[1:]
 		case args[0] == "--codegen3":
@@ -96,23 +89,10 @@ parsedFlags:
 		usage()
 		os.Exit(2)
 	}
-	if legacy && bootstrap {
-		fmt.Fprintln(os.Stderr, "--legacy cannot be combined with --bootstrap or --bootstrap-timing")
-		os.Exit(2)
-	}
-	if legacy && pipelineOptions.Codegen3 {
-		fmt.Fprintln(os.Stderr, "--codegen3 cannot be combined with --legacy")
-		os.Exit(2)
-	}
-	if legacy && args[0] != "sync" {
-		fmt.Fprintln(os.Stderr, "--legacy is only supported for sync")
-		os.Exit(2)
-	}
 	if err := compiler.PipelineOptionsValidate(pipelineOptions); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	bootstrap = !legacy
 
 	switch args[0] {
 	case "cache":
@@ -137,40 +117,26 @@ parsedFlags:
 		if len(args) > 1 {
 			root = args[1]
 		}
-		if bootstrap {
-			if pipelineOptions.Codegen3 {
-				written, err := compiler.SyncBootstrapWithOptions(root, pipelineOptions)
-				must(err)
-				for _, path := range written {
-					fmt.Println(displayPath(path))
-				}
-				return
-			}
-			if noPrelude {
-				_, err := compiler.SyncBootstrapNoPrelude(root)
-				must(err)
-				return
-			}
-			if bootstrapTiming {
-				_, err := compiler.SyncBootstrapWithTiming(root)
-				must(err)
-				return
-			}
-			_, err := compiler.SyncBootstrap(root)
-			must(err)
-		} else if noPrelude {
-			written, err := compiler.SyncNoPrelude(root)
+		if pipelineOptions.Codegen3 {
+			written, err := compiler.SyncBootstrapWithOptions(root, pipelineOptions)
 			must(err)
 			for _, path := range written {
 				fmt.Println(displayPath(path))
 			}
-		} else {
-			written, err := compiler.Sync(root)
-			must(err)
-			for _, path := range written {
-				fmt.Println(displayPath(path))
-			}
+			return
 		}
+		if noPrelude {
+			_, err := compiler.SyncBootstrapNoPrelude(root)
+			must(err)
+			return
+		}
+		if bootstrapTiming {
+			_, err := compiler.SyncBootstrapWithTiming(root)
+			must(err)
+			return
+		}
+		_, err := compiler.SyncBootstrap(root)
+		must(err)
 	case "build", "test":
 		command := args[0]
 		root, buildArgs := commandRoot(args[1:])
@@ -216,9 +182,8 @@ parsedFlags:
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mygo [--legacy|--bootstrap] [--bootstrap-timing] [--no-prelude] [--codegen3] [--opt-level=0|1|2] [--ir3-dump=path] [--codegen3-emit=dir] <sync|build|test|fmt|cache clean|clean -cache> [path|go build/test args...]")
+	fmt.Fprintln(os.Stderr, "usage: mygo [--bootstrap] [--bootstrap-timing] [--no-prelude] [--codegen3] [--opt-level=0|1|2] [--ir3-dump=path] [--codegen3-emit=dir] <sync|build|test|fmt|cache clean|clean -cache> [path|go build/test args...]")
 	fmt.Fprintln(os.Stderr, "  sync, build, and test use the bootstrap pipeline by default")
-	fmt.Fprintln(os.Stderr, "  --legacy      use the legacy pipeline (sync only)")
 	fmt.Fprintln(os.Stderr, "  --no-prelude  disable prelude auto-import (use when compiling prelude itself)")
 	fmt.Fprintln(os.Stderr, "  --bootstrap   compatibility alias for the default parser2, typeinference2, and codegen2 pipeline")
 	fmt.Fprintln(os.Stderr, "  --bootstrap-timing  print bootstrap stage durations to standard error")

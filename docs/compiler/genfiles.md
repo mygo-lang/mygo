@@ -1,5 +1,10 @@
 # genfiles.md — Code generations
 
+> Historical note: this document describes the retired
+> `parser` -> `typeinference` -> `codegen` pipeline. Current per-file
+> generation is implemented by codegen2 and codegen3; see
+> [compiler2/core.md](../compiler2/core.md).
+
 ## Per-Source-File Code Generation
 
 ### Overview

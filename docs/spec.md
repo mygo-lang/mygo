@@ -5,9 +5,8 @@
 > It is a normative summary for language users; the generated Go identifiers, dictionary parameters, and
 > Trampoline, etc. are implementation details and do not constitute a source language API unless specifically stated in this article.
 >
-> The self-hosted bootstrap pipeline is the CLI default; `--bootstrap` remains a compatibility alias.
-> The independent legacy pipeline (`parser` -> `typeinference` -> `codegen`) is available through `mygo --legacy sync`.
-> If the pipelines differ in behavior, this language contract remains authoritative.
+> The self-hosted `parser2` -> `typeinference2` -> `codegen2` pipeline is the CLI default;
+> `--bootstrap` remains a compatibility alias. This language contract is authoritative.
 
 ## 1. Source files, packages and comments
 
@@ -413,7 +412,3 @@ Ambiguities or matching failures are still possible; prefer single-argument inst
 Intuition; writing explicit collection types for variables avoids problems.
 - Inline Go generators handle a small number of simple Go expressions specially; complex embedded code should not assume 
 The same structural rewriting capabilities as the full Go parser.
-- parser still contains yacc conflicts; the covered grammar should be based on this article and tests, new or marginal grammar 
-This should be verified first with the default compiler.
-- The bootstrap pipeline is an evolving self-hosted implementation and is not guaranteed to work completely with the default compiler in all edge cases 
-consistent.
