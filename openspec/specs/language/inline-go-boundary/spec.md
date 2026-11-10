@@ -275,16 +275,4 @@ diagnostic; the compiler SHALL NOT try to reinterpret statements as a value.
 - **THEN** compilation SHALL fail with a diagnostic that a raw declaration
   requires a value context
 
-### Requirement: The legacy backend rejects raw declarations explicitly
-
-The legacy `--legacy` pipeline SHALL keep supporting inline Go blocks without
-`raw:`. When it encounters a block that declares `raw:`, it SHALL report an
-unsupported-feature diagnostic instead of ignoring the field or emitting
-incompatible Go.
-
-#### Scenario: Legacy backend rejects raw
-
-- **WHEN** `--legacy` compiles a block that declares `raw:`
-- **THEN** compilation SHALL fail with a diagnostic that raw declarations are
-  not supported by the legacy backend
 

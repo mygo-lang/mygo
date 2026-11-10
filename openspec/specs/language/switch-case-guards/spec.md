@@ -86,13 +86,6 @@ Parser2 SHALL preserve every source byte of a guarded case, including the guard 
 - **WHEN** a case contains a guard introducer without a guard expression
 - **THEN** parser2 SHALL return a diagnostic and retain the malformed region in the syntax tree
 
-### Requirement: Legacy pipeline rejects guard syntax explicitly
-The bootstrap pipeline SHALL accept guarded cases. The legacy `--legacy sync` pipeline SHALL reject guard syntax with an explicit unsupported-feature diagnostic and SHALL NOT emit generated output that silently ignores the guard.
-
-#### Scenario: Legacy sync rejects a guarded case
-- **WHEN** a program containing `case P if cond => body` is processed by `--legacy sync`
-- **THEN** the command SHALL fail with a diagnostic identifying case guards as unsupported by the legacy pipeline
-
 ### Requirement: Then-form guarded cases preserve their own structural terminator
 
 Parser2 SHALL determine a case's header terminator with delimiter-depth-aware scanning that starts at that case, so a `then` or `=>` inside a parenthesized guard expression SHALL NOT be mistaken for the case header terminator. A parenthesized `if` expression in a `then`-form guard SHALL remain part of the guard expression, and the case's own `end` SHALL pair with that case. Arrow-form guarded cases SHALL keep their existing behavior, and lossless replay, formatter idempotence, and guard evaluation semantics SHALL be preserved.
