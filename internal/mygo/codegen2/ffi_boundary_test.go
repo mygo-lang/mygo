@@ -89,6 +89,9 @@ end
 	depFileWithIDs := mustAssignFileExprIDsForTest(t, depFile.F0)
 	myGoPackage := typeinference2.MyGoPackageInfo{
 		Alias: "backends", Path: "example.test/backends", Decls: depFileWithIDs.Decls,
+		PretypedEnv: None[[]typeinference2.EnvEntry](),
+		EnumIndex:   None[map[string]typeinference2.EnumDeclIndexEntry](),
+		ValueIndex:  None[map[string]typeinference2.PackageValueIndexEntry](),
 	}
 
 	src := `package app
